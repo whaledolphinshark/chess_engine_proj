@@ -2,10 +2,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "chess_engine/fen.h"
+#include "chess_engine/board.h"
+#include "board_internal.h"
 #include "chess_engine/moves.h"
 #include "chess_engine/transposition_table.h"
-#include "chess_engine/board.h"
 #include "utils/bitboard_util.h"
 #include "utils/error_handling.h"
 
@@ -41,7 +41,7 @@ static _piece character_to_piece(char character){
 }
 
 // assumes fen is correct, breaks if fen is not correct
-void fn_fen_to_board(_board *board, char *fen){
+void cb_fen_to_board(_board *board, char *fen){
     int i = 0;
     int array_index = 56;
     char character;
@@ -138,16 +138,17 @@ void fn_fen_to_board(_board *board, char *fen){
     // moves
     mv_generate_moves(board);
 
-    // game state
-
     // zobrist hash and history
     board->zobrist_hash = cb_hash_board(board);
     tt_clear_items(board->history);
     int one = 1;
     tt_insert_item(board->history, board->zobrist_hash, &one);
+
+    // game state
+    cb_calculate_game_state(board);
 }
 
-void fn_board_to_fen(_board *board, char *buffer){
+void cb_board_to_fen(_board *board, char *buffer){
     char piece_symbols[12] = {'K', 'P', 'R', 'N', 'B', 'Q', 'k', 'p', 'r', 'n', 'b', 'q'};
     char empty_spaces = 0;
     char str[5];
@@ -251,7 +252,7 @@ void fn_board_to_fen(_board *board, char *buffer){
     strncat(buffer, str, 5);
 }
 
-void fn_display_fen(char *fen){
+void cb_display_fen(char *fen){
     int i = 0;
     char character;
     printf("%-2c|", '8');

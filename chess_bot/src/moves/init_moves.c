@@ -29,8 +29,6 @@ uint64_t top_border = 18374686479671623680UL;
 uint64_t left_border = 72340172838076673UL;
 uint64_t right_border = 9259542123273814144UL;
 
-int mv_ready = 0;
-
 static void generate_all_blocker_patterns(uint64_t movement_mask, int square, _list *blocker_buffer){
     _list *blocker_position_list = gl_create_list(sizeof(int));
     for (int i = 0; i < 64; i++){
@@ -193,10 +191,5 @@ static void init_lookup_tables(){
 }
 
 void mv_init_moves(){
-    if (mv_ready == 1){
-        return;
-    }
-
     init_lookup_tables();
-    mv_ready = 1;
 }

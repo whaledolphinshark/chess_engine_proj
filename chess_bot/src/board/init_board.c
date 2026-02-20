@@ -9,8 +9,6 @@ uint64_t black_turn_key;
 uint64_t castling_keys[16];
 uint64_t en_passant_keys[8];
 
-int cb_ready = 0;
-
 static uint64_t generate_random_uint64(){
     int int_bits = sizeof(int) * 8;
     int calls_needed = 64 / int_bits;
@@ -24,10 +22,6 @@ static uint64_t generate_random_uint64(){
 }
 
 void cb_init_board(){
-    if (cb_ready == 1){
-        return;
-    }
-
     srand(time(NULL));
     for (int i = 0; i < 64; i++){
         for (int j = 0; j < 12; j++){
@@ -44,6 +38,4 @@ void cb_init_board(){
     for (int i = 0; i < 8; i++){
         en_passant_keys[i] = generate_random_uint64();
     }
-
-    cb_ready = 1;
 }

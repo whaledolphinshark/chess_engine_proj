@@ -31,8 +31,6 @@ extern uint64_t top_border;
 extern uint64_t left_border;
 extern uint64_t right_border;
 
-extern int mv_ready;
-
 void mv_init_moves();
 void mv_add_move(_board *board, int from, int to, _piece promotion);
 void mv_clear_moves(_board *board);

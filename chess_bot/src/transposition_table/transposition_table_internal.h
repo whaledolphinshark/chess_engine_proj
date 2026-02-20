@@ -32,6 +32,4 @@ typedef struct _transposition_table{
     _key_value_pair *buckets;
 }_transposition_table;
 
-void tt_init_transposition_table();
-
 #endif

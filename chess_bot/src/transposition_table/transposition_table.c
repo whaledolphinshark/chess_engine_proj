@@ -1,17 +1,30 @@
 #include <stdlib.h>
 #include <string.h>
-#include <stdio.h>
 
 #include "chess_engine/transposition_table.h"
 #include "utils/bitboard_util.h"
 #include "transposition_table_internal.h"
 #include "utils/error_handling.h"
 
+static _key_value_pair *malloc_buckets(uint64_t num_buckets){
+    _key_value_pair *new_buckets = malloc(sizeof(_key_value_pair) * num_buckets);
+    if (new_buckets == NULL){
+        eh_die("malloc() failed");
+    }
+
+    for (int i = 0; i < num_buckets; i++){
+        _key_value_pair empty_bucket = {EMPTY, 0, NULL, NULL};
+        new_buckets[i] = empty_bucket;
+    }
+
+    return new_buckets;
+}
+
 // 1 if found open spot in which case values of entry are copied and entry needs to be freed if malloced
 // 0 if entry is placed in a linked list and does not need to be freed
+// -1 if entry is already there
 static int place_entry(_key_value_pair *buckets, _key_value_pair *entry, uint64_t index){
     _key_value_pair *bucket = &(buckets[index]);
-
     if (bucket->occupancy == EMPTY){
         bucket->occupancy = FILLED;
         bucket->hash = entry->hash;
@@ -20,19 +33,26 @@ static int place_entry(_key_value_pair *buckets, _key_value_pair *entry, uint64_
         return 1;
     }
     else{
+        if (bucket->hash == entry->hash){
+            return -1;
+        }
         while (bucket->next != NULL){
             bucket = bucket->next;
         }
-
         bucket->next = entry;
     }
-
     return 0;
 }
 
-static void expand_table(_transposition_table *hash_table){
-    int new_num_buckets = hash_table->num_buckets * 2;
-    _key_value_pair *new_buckets = malloc(sizeof(_key_value_pair) * new_num_buckets);
+static void resize_table(_transposition_table *hash_table, int expand){
+    uint64_t new_num_buckets;
+    if (expand == 1){
+        new_num_buckets = hash_table->num_buckets * 2;
+    }
+    else{
+        new_num_buckets = hash_table->num_buckets / 2;
+    }
+    _key_value_pair *new_buckets = malloc_buckets(new_num_buckets);
 
     for (int i = 0; i < hash_table->num_buckets; i++){
         _key_value_pair *first_entry = &(hash_table->buckets[i]);
@@ -67,11 +87,11 @@ static void expand_table(_transposition_table *hash_table){
                 free(bucket);
             }
         }
-
-        free(hash_table->buckets);
-        hash_table->buckets = new_buckets;
-        hash_table->num_buckets = new_num_buckets;
     } 
+
+    free(hash_table->buckets);
+    hash_table->buckets = new_buckets;
+    hash_table->num_buckets = new_num_buckets;
 }
 
 _transposition_table *tt_create_transposition_table(unsigned long type_size){
@@ -84,18 +104,7 @@ _transposition_table *tt_create_transposition_table(unsigned long type_size){
     hash_table->num_buckets = MIN_NUM_BUCKETS;
     hash_table->num_items = 0;
     // buckets is an array of lists
-    hash_table->buckets = malloc(sizeof(_key_value_pair) * hash_table->num_buckets);
-    if (hash_table->buckets == NULL){
-        eh_die("malloc() failed");
-    }
-
-    // buckets is a pointer to a region of memory
-    // the region of memory holds pointers to lists
-    for (int i = 0; i < MIN_NUM_BUCKETS; i++){
-        _key_value_pair empty_bucket = {1, 0, NULL, NULL};
-        hash_table->buckets[i] = empty_bucket;
-        // memcpy(&(hash_table->buckets[i]), &empty_bucket, sizeof(_key_value_pair));
-    }
+    hash_table->buckets = malloc_buckets(MIN_NUM_BUCKETS);
 
     return hash_table;
 }
@@ -107,7 +116,7 @@ void tt_insert_item(_transposition_table *hash_table, uint64_t zobrist_hash, voi
 
     // check if need to expand
     if (hash_table->num_items >= hash_table->num_buckets * LOAD_FACTOR){
-        expand_table(hash_table);
+        resize_table(hash_table, 1);
     }
 
     void *item_ptr = malloc(sizeof(hash_table->item_size));
@@ -124,6 +133,10 @@ void tt_insert_item(_transposition_table *hash_table, uint64_t zobrist_hash, voi
 
     int code = place_entry(hash_table->buckets, entry, entry->hash % hash_table->num_buckets);
     if (code == 1){
+        free(entry);
+    }
+    else if (code == -1){
+        free(entry->value);
         free(entry);
     }
 
@@ -171,14 +184,21 @@ int tt_delete_item(_transposition_table *hash_table, uint64_t zobrist_hash){
         _key_value_pair *next = bucket->next;
         if (next == NULL){
             bucket->occupancy = EMPTY;
+            free(bucket->value);
+            if (hash_table->num_items * 2 * LOAD_FACTOR < hash_table->num_buckets && hash_table->num_buckets > MIN_NUM_BUCKETS){
+                resize_table(hash_table, 0);
+            }
             return 1;
         }
-
+        
+        free(bucket->value);
         bucket->hash = next->hash;
         bucket->value = next->value;
         bucket->next = next->next;
         free(next);
-        // maybe rehash the table if few entries?
+        if (hash_table->num_items * 2 * LOAD_FACTOR < hash_table->num_buckets && hash_table->num_buckets > MIN_NUM_BUCKETS){
+            resize_table(hash_table, 0);
+        }
         return 1;
     }
 
@@ -187,7 +207,11 @@ int tt_delete_item(_transposition_table *hash_table, uint64_t zobrist_hash){
             hash_table->num_items--;
             _key_value_pair *next = bucket->next;
             bucket->next = next->next;
+            free(next->value);
             free(next);
+            if (hash_table->num_items * 2 * LOAD_FACTOR < hash_table->num_buckets && hash_table->num_buckets > MIN_NUM_BUCKETS){
+                resize_table(hash_table, 0);
+            }
             return 1;
         }
 
@@ -224,8 +248,10 @@ void tt_clear_items(_transposition_table *hash_table){
         eh_die("passed in null pointer");
     }
 
+    _key_value_pair *new_buckets = malloc_buckets(MIN_NUM_BUCKETS);
+
     for (int i = 0; i < hash_table->num_buckets; i++){
-        // no need to free bucket since that is actually not malloced
+        // no need to free the first entry since that is actually not malloced
         _key_value_pair *bucket = &(hash_table->buckets[i]);
         if (bucket->occupancy == EMPTY){
             continue;
@@ -234,15 +260,18 @@ void tt_clear_items(_transposition_table *hash_table){
 
         free(bucket->value);
         bucket->occupancy = EMPTY;
+        bucket->next = NULL;
         while (next != NULL){
-            bucket->next = NULL;
+            free(next->value);
             bucket = next;
             next = next->next;
-            free(bucket->value);
             free(bucket);
         }
     }
 
+    free(hash_table->buckets);
+    hash_table->buckets = new_buckets;
+    hash_table->num_buckets = MIN_NUM_BUCKETS;
     hash_table->num_items = 0;
 }
 
