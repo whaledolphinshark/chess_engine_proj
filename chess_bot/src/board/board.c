@@ -140,7 +140,6 @@ void cb_make_move(_board *board, _move move){
         board->piece_array[move.from] = NONE;
         board->zobrist_hash ^= piece_keys[move.to][move.promotion] ^ piece_keys[move.from][move.piece];
         board->halfmove_clock = 0;
-        tt_clear_items(board->history);
     }
     else{
         board->bitboards[move.piece] ^= (1UL << move.from) | (1UL << move.to);
@@ -225,7 +224,6 @@ void cb_make_move(_board *board, _move move){
     // check captures
     if ((move.info & 1UL) != 0){
         board->halfmove_clock = 0;
-        tt_clear_items(board->history);
         // check if en passant or not
         if ((move.info & 4UL) != 0){
             int captured_pawn_square = move.to + (board->turn == WHITE ? -8 : 8);
@@ -237,8 +235,6 @@ void cb_make_move(_board *board, _move move){
             board->zobrist_hash ^= piece_keys[move.to][move.capture];
             board->bitboards[move.capture] ^= 1UL << move.to;
         }
-
-        // check if insufficient material
     }
 
     board->white_pieces = board->bitboards[W_KING] | board->bitboards[W_PAWN] | board->bitboards[W_ROOK] | board->bitboards[W_BISHOP] | board->bitboards[W_KNIGHT] | board->bitboards[W_QUEEN];
@@ -279,7 +275,15 @@ void cb_make_move(_board *board, _move move){
 }
 
 void cb_undo_move(_move move, _board *board){
-    // stuff here
+    // reverse promotion
+    if ((move.info & 2UL) != 0){
+        board->bitboards[move.promotion] ^= 1UL << move.to;
+        board->bitboards[move.piece] ^= 1UL << move.from;
+        board->piece_array[move.to] = NONE;
+        board->piece_array[move.from] = move.piece;
+        board->zobrist_hash ^= piece_keys[move.to][move.promotion] ^ piece_keys[move.from][move.piece];
+        // something with half move clock
+    }
 }
 
 void cb_print_board(_board *board){
