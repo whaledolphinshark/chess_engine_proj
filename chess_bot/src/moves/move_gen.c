@@ -343,7 +343,7 @@ void mv_generate_moves(_board *board){
 
     // pawn
     uint64_t enemy_pieces = board->board ^ friendly_pieces;
-    uint64_t en_passant_mask = board->pawn_jump == 0 ? 0 : 1UL << board->pawn_jump;
+    uint64_t en_passant_mask = board->en_passant_square == 0 ? 0 : 1UL << board->en_passant_square;
     while (pawns != 0){
         int square = bb_pop_lsb(&pawns) - 1;
         uint64_t forward;

@@ -10,7 +10,7 @@
 #include "utils/bitboard_util.h"
 #include "utils/error_handling.h"
 
-int pawn_jumps[2][8] = {{40, 41, 42, 43, 44, 45, 46, 47}, {16, 17, 18, 19, 20, 21, 22, 23}};
+int en_passant_squares[2][8] = {{40, 41, 42, 43, 44, 45, 46, 47}, {16, 17, 18, 19, 20, 21, 22, 23}};
 
 void cb_calculate_game_state(_board *board){
     // checkmate, stalemate, 50 move rule
@@ -93,7 +93,7 @@ _board *cb_create_board(){
 
     board->plies = 0;
     board->turn = WHITE;
-    board->pawn_jump = 0;
+    board->en_passant_square = 0;
     board->castling_rights = 15;
     board->halfmove_clock = 0;
     board->fullmove_clock = 1;
@@ -112,6 +112,8 @@ _board *cb_create_board(){
     board->history = tt_create_transposition_table(sizeof(int));
     int one = 1;
     tt_insert_item(board->history, board->zobrist_hash, &one);
+    
+    board->previous_moves = (_list *)gl_create_list(sizeof(_move_state));
 
     mv_generate_moves(board);
 
@@ -121,13 +123,14 @@ _board *cb_create_board(){
 // assumes move is valid
 void cb_make_move(_board *board, _move move){
     if (board->game_state != ONGOING){
-        return;
+        eh_die("game has ended");
     }
-    
-    if (board->pawn_jump != 0){
-        board->zobrist_hash ^= en_passant_keys[board->pawn_jump % 8];
+
+    _move_state move_state = {move, board->castling_rights, board->halfmove_clock, board->en_passant_square};
+    if (board->en_passant_square != 0){
+        board->zobrist_hash ^= en_passant_keys[board->en_passant_square % 8];
     }
-    board->pawn_jump = 0;
+    board->en_passant_square = 0;
     board->halfmove_clock++;
 
     // make the move
@@ -177,17 +180,16 @@ void cb_make_move(_board *board, _move move){
             }
             board->zobrist_hash ^= castling_keys[board->castling_rights];
             board->castling_rights ^= board->turn == WHITE ? 3UL : 13UL;
-	    board->zobrist_hash ^= castling_keys[board->castling_rights];
+	        board->zobrist_hash ^= castling_keys[board->castling_rights];
         }
 
         // check en passant and castling rights
         _piece piece = move.piece;
         if (piece == W_PAWN || piece == B_PAWN){
             board->halfmove_clock = 0;
-            tt_clear_items(board->history);
             if (abs(move.to - move.from) == 16){
-                board->pawn_jump = pawn_jumps[board->turn][move.from % 8];
-                board->zobrist_hash ^= en_passant_keys[board->pawn_jump % 8];
+                board->en_passant_square = en_passant_squares[board->turn][move.from % 8];
+                board->zobrist_hash ^= en_passant_keys[board->en_passant_square % 8];
             }
         }
         else if (piece == W_ROOK || piece == B_ROOK){
@@ -209,7 +211,7 @@ void cb_make_move(_board *board, _move move){
             board->zobrist_hash ^= castling_keys[board->castling_rights];
         }
         else if (piece == W_KING || piece == B_KING){
-	    // if move was castle then i dont need to do this
+	        // if move was castle then i dont need to do this
             board->zobrist_hash ^= castling_keys[board->castling_rights];
             if (move.from == 4){
                 board->castling_rights &= ~3UL;
@@ -271,19 +273,112 @@ void cb_make_move(_board *board, _move move){
         tt_insert_item(board->history, board->zobrist_hash, &one);
     }
 
+    // add move to previous moves
+    gl_append_item(board->previous_moves, &move_state);
+
     cb_calculate_game_state(board);
 }
 
 void cb_undo_move(_move move, _board *board){
-    // reverse promotion
+    unsigned long prev_moves_count = gl_size_of_list(board->previous_moves);
+    if (prev_moves_count == 0){
+        eh_die("no moves to undo");
+    }
+    _move_state prev_move_state = *((_move_state *)gl_access_item(board->previous_moves, prev_moves_count - 1));
+    if (mv_moves_equal(move, prev_move_state.move) != 1){
+        eh_die("cannot undo move that was not played");
+    }
+
+    board->game_state = ONGOING;
+    board->plies--;
+    board->halfmove_clock = prev_move_state.halfmove_clock;
+    if (board->turn == WHITE){
+        board->fullmove_clock--;
+        board->turn = BLACK;
+    }
+    else{
+        board->turn = WHITE;
+    }
+
+    board->zobrist_hash ^= black_turn_key ^ castling_keys[board->castling_rights] ^ castling_keys[prev_move_state.castling_rights];
+    board->castling_rights = prev_move_state.castling_rights;
+    if (board->en_passant_square != 0){
+        board->zobrist_hash ^= en_passant_keys[board->en_passant_square % 8];
+    }
+    if (prev_move_state.en_passant_square != 0){
+        board->zobrist_hash ^= en_passant_keys[prev_move_state.en_passant_square % 8];
+    }
+    board->en_passant_square = prev_move_state.en_passant_square;
+
     if ((move.info & 2UL) != 0){
         board->bitboards[move.promotion] ^= 1UL << move.to;
         board->bitboards[move.piece] ^= 1UL << move.from;
         board->piece_array[move.to] = NONE;
         board->piece_array[move.from] = move.piece;
         board->zobrist_hash ^= piece_keys[move.to][move.promotion] ^ piece_keys[move.from][move.piece];
-        // something with half move clock
     }
+    else{
+        board->bitboards[move.piece] ^= (1UL << move.from) | (1UL << move.to);
+        board->piece_array[move.to] = NONE;
+        board->piece_array[move.from] = move.piece;
+        board->zobrist_hash ^= piece_keys[move.to][move.piece] ^ piece_keys[move.from][move.piece];
+        
+        if ((move.info & 8UL) != 0){
+            switch (move.to){
+                case 2:
+                    board->bitboards[W_ROOK] ^= 9UL;
+                    board->piece_array[0] = W_ROOK;
+                    board->piece_array[3] = NONE;
+                    board->zobrist_hash ^= piece_keys[3][W_ROOK] ^ piece_keys[0][W_ROOK];
+                    break;
+                case 6:
+                    board->bitboards[W_ROOK] ^= 160UL;
+                    board->piece_array[7] = W_ROOK;
+                    board->piece_array[5] = NONE;
+                    board->zobrist_hash ^= piece_keys[5][W_ROOK] ^ piece_keys[7][W_ROOK];
+                    break;
+                case 58:
+                    board->bitboards[B_ROOK] ^= 648518346341351424UL;
+                    board->piece_array[56] = B_ROOK;
+                    board->piece_array[59] = NONE;
+                    board->zobrist_hash ^= piece_keys[59][B_ROOK] ^ piece_keys[56][B_ROOK];
+                    break;
+                case 62:
+                    board->bitboards[B_ROOK] ^= 11529215046068469760UL;
+                    board->piece_array[63] = B_ROOK;
+                    board->piece_array[61] = NONE;
+                    board->zobrist_hash ^= piece_keys[61][B_ROOK] ^ piece_keys[63][B_ROOK];
+                    break;
+            }
+        }
+    }
+
+    if ((move.info & 1UL) != 0){
+        if ((move.info & 4UL) != 0){
+            int captured_pawn_square = move.to + (board->turn == WHITE ? -8 : 8);
+            board->zobrist_hash ^= piece_keys[captured_pawn_square][move.capture];
+            board->bitboards[move.capture] ^= 1UL << captured_pawn_square;
+            board->piece_array[captured_pawn_square] = move.capture;
+        }
+        else{
+            board->zobrist_hash ^= piece_keys[move.to][move.capture];
+            board->bitboards[move.capture] ^= 1UL << move.to;
+            board->piece_array[move.to] = move.capture;
+        }
+    }
+
+    board->white_pieces = board->bitboards[W_KING] | board->bitboards[W_PAWN] | board->bitboards[W_ROOK] | board->bitboards[W_BISHOP] | board->bitboards[W_KNIGHT] | board->bitboards[W_QUEEN];
+    board->black_pieces = board->bitboards[B_KING] | board->bitboards[B_PAWN] | board->bitboards[B_ROOK] | board->bitboards[B_BISHOP] | board->bitboards[B_KNIGHT] | board->bitboards[B_QUEEN];
+    board->board = board->white_pieces | board->black_pieces;
+
+    uint64_t potential_king_in_check = board->bitboards[board->turn == WHITE ? W_KING : B_KING];
+    board->in_check = mv_is_square_attacked(bb_get_lsb(potential_king_in_check) - 1, board, board->board, board->turn);
+
+    mv_generate_moves(board);
+
+    tt_delete_item(board->history, board->zobrist_hash);
+
+    gl_remove_item(board->previous_moves, prev_moves_count - 1);
 }
 
 void cb_print_board(_board *board){
@@ -319,8 +414,8 @@ uint64_t cb_hash_board(_board *board){
 
     hash ^= castling_keys[board->castling_rights];
 
-    if (board->pawn_jump != 0){
-        hash ^= en_passant_keys[board->pawn_jump % 8];
+    if (board->en_passant_square != 0){
+        hash ^= en_passant_keys[board->en_passant_square % 8];
     }
 
     return hash;

@@ -5,7 +5,7 @@
 #include "moves_internal.h"
 #include "utils/error_handling.h"
 
-static int moves_equal(_move left, _move right){
+int mv_moves_equal(_move left, _move right){
     return left.from == right.from && left.to == right.to && left.piece == right.piece && left.promotion == right.promotion && left.capture == right.capture && left.info == right.info;
 }
 
@@ -92,7 +92,7 @@ _move mv_uci_to_move(char *move_uci, _board *board, int validate, int *valid){
 
     if (validate == 1){
         for (int i = 0; i < board->move_count; i++){
-            if (moves_equal(move, board->move_pool[i]) == 1){
+            if (mv_moves_equal(move, board->move_pool[i]) == 1){
                 *valid = 1;
             }
         }

@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 
+#include "utils/list.h"
+
 #define NUM_BITBOARDS 12
 #define MAX_MOVES 218
 
@@ -46,6 +48,13 @@ typedef struct _move{
     uint8_t info;
 }_move;
 
+typedef struct _move_state{
+    _move move;
+    uint8_t castling_rights;
+    int halfmove_clock;
+    int en_passant_square;
+}_move_state;
+
 typedef struct _board{
     // bitboards
     // king, pawns, rooks, knights, bishops, queen, white first black second
@@ -55,7 +64,7 @@ typedef struct _board{
     uint64_t black_pieces;
     uint64_t board;
     // stores the square where a pawn is vulnerable to en passant, 0 = none
-    int pawn_jump;
+    int en_passant_square;
     // stores castling rights, 1st bit: white left rook, 2nd bit: white right rook, 3rd bit: black left rook, 4th bit: black right rook
     uint8_t castling_rights;
     int plies;
@@ -68,6 +77,7 @@ typedef struct _board{
     _move move_pool[MAX_MOVES];
     int move_count;
     _transposition_table *history;
+    _list *previous_moves;
 }_board;
 
 #endif
