@@ -36,6 +36,13 @@ typedef enum{
     NONE = 12
 }_piece;
 
+typedef enum{
+    NORMAL = 0,
+    EN_PASSANT = 1,
+    CASTLE = 2,
+    PROMOTION = 3
+}_special_move;
+
 typedef struct _transposition_table _transposition_table;
 
 typedef struct _move{
@@ -44,8 +51,7 @@ typedef struct _move{
     _piece piece;
     _piece capture;
     _piece promotion;
-    // 1st bit: is capture, 2nd bit: is promotion, 3rd bit: is en passant, 4th bit: is castle
-    uint8_t info;
+    _special_move special_move;
 }_move;
 
 typedef struct _move_state{

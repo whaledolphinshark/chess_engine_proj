@@ -9,7 +9,8 @@
 static void add_moves_to_buffer(_board *board, int square, uint64_t moves){
     while (moves != 0){
         int target = bb_pop_lsb(&moves) - 1;
-        mv_add_move(board, square, target, NONE);
+        board->move_pool[board->move_count] = mv_init_move(board, square, target, NONE);
+        board->move_count++;
     }
 }
 
@@ -34,13 +35,18 @@ static void add_pawn_moves_to_buffer(_board *board, int square, uint64_t moves){
     while (moves != 0){
         int target = bb_pop_lsb(&moves) - 1;
         if (((1UL << target) & promotion_rank) == 0){
-            mv_add_move(board, square, target, NONE);
+            board->move_pool[board->move_count] = mv_init_move(board, square, target, NONE);
+            board->move_count++;
         }
         else{
-            mv_add_move(board, square, target, promotions[0]);
-            mv_add_move(board, square, target, promotions[1]);
-            mv_add_move(board, square, target, promotions[2]);
-            mv_add_move(board, square, target, promotions[3]);
+            board->move_pool[board->move_count] = mv_init_move(board, square, target, promotions[0]);
+            board->move_count++;
+            board->move_pool[board->move_count] = mv_init_move(board, square, target, promotions[1]);
+            board->move_count++;
+            board->move_pool[board->move_count] = mv_init_move(board, square, target, promotions[2]);
+            board->move_count++;
+            board->move_pool[board->move_count] = mv_init_move(board, square, target, promotions[3]);
+            board->move_count++;
         }
     }
 }
@@ -262,7 +268,7 @@ int mv_is_square_attacked(int square, _board *board, uint64_t occupied, _color s
 }
 
 void mv_generate_moves(_board *board){
-    mv_clear_moves(board);
+    board->move_count = 0;
 
     uint64_t pawns, rooks, knights, bishops, queens, king;
     uint64_t friendly_pieces;

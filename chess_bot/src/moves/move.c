@@ -6,41 +6,31 @@
 #include "utils/error_handling.h"
 
 int mv_moves_equal(_move left, _move right){
-    return left.from == right.from && left.to == right.to && left.piece == right.piece && left.promotion == right.promotion && left.capture == right.capture && left.info == right.info;
+    return left.from == right.from && left.to == right.to && left.piece == right.piece && left.promotion == right.promotion && left.capture == right.capture && left.special_move == right.special_move;
 }
 
-_move init_move(_board *board, int from, int to, _piece promotion){
+_move mv_init_move(_board *board, int from, int to, _piece promotion){
     _move move;
     move.to = to;
     move.from = from;
     move.piece = board->piece_array[from];
     move.promotion = promotion;
-    move.info = 0;
-    // promotion
-    move.info |= promotion == NONE ? 0 : 2UL;
-    // castling
-    move.info |= (move.piece == W_KING || move.piece == B_KING) && abs(from - to) == 2 ? 8UL : 0;
-    // en passant
-    if ((move.piece == W_PAWN || move.piece == B_PAWN) && to == board->pawn_jump){
+    move.capture = board->piece_array[to];
+    if (promotion != NONE){
+        move.special_move = PROMOTION;
+    }
+    else if ((move.piece == W_KING || move.piece == B_KING) && abs(from - to) == 2){
+        move.special_move = CASTLE;
+    }
+    else if ((move.piece == W_PAWN || move.piece == B_PAWN) && to == board->en_passant_square){
+        move.special_move = EN_PASSANT;
         move.capture = board->turn == WHITE ? B_PAWN : W_PAWN;
-        // is en passant and is capture
-        move.info |= 5UL;
     }
     else{
-        move.capture = board->piece_array[to];
-        move.info |= move.capture == NONE ? 0 : 1UL;
+        move.special_move = NORMAL;
     }
 
     return move;
-}
-
-void mv_add_move(_board *board, int from, int to, _piece promotion){
-    board->move_pool[board->move_count] = init_move(board, from, to, promotion);
-    board->move_count++;
-}
-
-void mv_clear_moves(_board *board){
-    board->move_count = 0;
 }
 
 _move mv_uci_to_move(char *move_uci, _board *board, int validate, int *valid){
@@ -88,7 +78,7 @@ _move mv_uci_to_move(char *move_uci, _board *board, int validate, int *valid){
         }
     }
 
-    _move move = init_move(board, from, to, promotion);
+    _move move = mv_init_move(board, from, to, promotion);
 
     if (validate == 1){
         for (int i = 0; i < board->move_count; i++){
@@ -104,7 +94,7 @@ void mv_print_move(_move move, int new_line){
     char files[8] = {'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'};
     char promotions[4] = {'r', 'n', 'b', 'q'};
     printf("%c%d%c%d", files[move.from % 8], move.from / 8 + 1, files[move.to % 8], move.to / 8 + 1);
-    if ((move.info & 2UL) != 0){
+    if (move.special_move == PROMOTION){
         int promotion = NONE;
         switch (move.promotion){
             case W_ROOK:

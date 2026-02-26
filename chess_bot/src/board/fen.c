@@ -117,7 +117,7 @@ void cb_fen_to_board(_board *board, char *fen){
         i++;
     }
 
-    board->pawn_jump = en_passant_square;
+    board->en_passant_square = en_passant_square;
 
     i++;
     char *ptr;
@@ -223,8 +223,8 @@ void cb_board_to_fen(_board *board, char *buffer){
     // en passant
     str[0] = ' ';
     char files[8] = {'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'};
-    if (board->pawn_jump != 0){
-        str[1] = files[board->pawn_jump % 8];
+    if (board->en_passant_square != 0){
+        str[1] = files[board->en_passant_square% 8];
         str[2] = board->turn == WHITE ? '6' : '3';
         str[3] = ' ';
         str[4] = '\0';

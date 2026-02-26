@@ -136,7 +136,7 @@ void cb_make_move(_board *board, _move move){
     // make the move
     // if it is a promotion, i only need to check if it is a capture as well
     // no need to check jumps and castling rights
-    if ((move.info & 2UL) != 0){
+    if (move.special_move == PROMOTION){
         board->bitboards[move.promotion] ^= 1UL << move.to;
         board->bitboards[move.piece] ^= 1UL << move.from;
         board->piece_array[move.to] = move.promotion;
@@ -151,7 +151,7 @@ void cb_make_move(_board *board, _move move){
         board->zobrist_hash ^= piece_keys[move.to][move.piece] ^ piece_keys[move.from][move.piece];
 
         // if the move is castling then update rook position
-        if ((move.info & 8UL) != 0){
+        if (move.special_move == CASTLE){
             switch (move.to){
                 case 2:
                     board->bitboards[W_ROOK] ^= 9UL;
@@ -224,10 +224,10 @@ void cb_make_move(_board *board, _move move){
     }
 
     // check captures
-    if ((move.info & 1UL) != 0){
+    if (move.capture != NONE){
         board->halfmove_clock = 0;
         // check if en passant or not
-        if ((move.info & 4UL) != 0){
+        if (move.special_move == EN_PASSANT){
             int captured_pawn_square = move.to + (board->turn == WHITE ? -8 : 8);
             board->zobrist_hash ^= piece_keys[captured_pawn_square][move.capture];
             board->bitboards[move.capture] ^= 1UL << captured_pawn_square;
@@ -310,7 +310,7 @@ void cb_undo_move(_move move, _board *board){
     }
     board->en_passant_square = prev_move_state.en_passant_square;
 
-    if ((move.info & 2UL) != 0){
+    if (move.special_move == PROMOTION){
         board->bitboards[move.promotion] ^= 1UL << move.to;
         board->bitboards[move.piece] ^= 1UL << move.from;
         board->piece_array[move.to] = NONE;
@@ -323,7 +323,7 @@ void cb_undo_move(_move move, _board *board){
         board->piece_array[move.from] = move.piece;
         board->zobrist_hash ^= piece_keys[move.to][move.piece] ^ piece_keys[move.from][move.piece];
         
-        if ((move.info & 8UL) != 0){
+        if (move.special_move == CASTLE){
             switch (move.to){
                 case 2:
                     board->bitboards[W_ROOK] ^= 9UL;
@@ -353,8 +353,8 @@ void cb_undo_move(_move move, _board *board){
         }
     }
 
-    if ((move.info & 1UL) != 0){
-        if ((move.info & 4UL) != 0){
+    if (move.capture != NONE){
+        if (move.special_move == EN_PASSANT){
             int captured_pawn_square = move.to + (board->turn == WHITE ? -8 : 8);
             board->zobrist_hash ^= piece_keys[captured_pawn_square][move.capture];
             board->bitboards[move.capture] ^= 1UL << captured_pawn_square;
