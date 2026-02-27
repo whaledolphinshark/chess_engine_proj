@@ -1,4 +1,7 @@
 bin/
-Makefile
+*.mk
 todo.txt
 test.c
+.venv
+.pytest_cache
+__pycache__
