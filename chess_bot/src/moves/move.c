@@ -39,7 +39,7 @@ _move mv_uci_to_move(char *move_uci, _board *board, int validate, int *valid){
     int from = 0;
     int to = 0;
     *valid = 0;
-    while (string_length < 7 && move_uci[string_length] != '\0'){
+    while (string_length < 6 && move_uci[string_length] != '\0'){
         string_length++;
     }
 
@@ -90,33 +90,62 @@ _move mv_uci_to_move(char *move_uci, _board *board, int validate, int *valid){
     return move;
 }
 
+void mv_move_to_uci(_move move, char *buffer){
+    char files[8] = {'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'};
+    buffer[0] = files[move.from % 8];
+    buffer[1] = move.from / 8 + 1;
+    buffer[2] = files[move.to % 8];
+    buffer[3] = move.to / 8 + 1;
+    switch (move.promotion){
+        case W_ROOK:
+        case B_ROOK:
+            buffer[4] = 'r';
+            buffer[5] = '\0';
+            break;
+        case W_KNIGHT:
+        case B_KNIGHT:
+            buffer[4] = 'n';
+            buffer[5] = '\0';
+            break;
+        case W_BISHOP:
+        case B_BISHOP:
+            buffer[4] = 'b';
+            buffer[5] = '\0';
+            break;
+        case W_QUEEN:
+        case B_QUEEN:
+            buffer[4] = 'q';
+            buffer[5] = '\0';
+            break;
+        default:
+            buffer[4] = '\0';
+    }
+}
+
 void mv_print_move(_move move, int new_line){
     char files[8] = {'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'};
-    char promotions[4] = {'r', 'n', 'b', 'q'};
     printf("%c%d%c%d", files[move.from % 8], move.from / 8 + 1, files[move.to % 8], move.to / 8 + 1);
     if (move.special_move == PROMOTION){
-        int promotion = NONE;
         switch (move.promotion){
             case W_ROOK:
             case B_ROOK:
-                promotion = 0;
+                printf("%c", 'r');
                 break;
             case W_KNIGHT:
             case B_KNIGHT:
-                promotion = 1;
+                printf("%c", 'n');
                 break;
             case W_BISHOP:
             case B_BISHOP:
-                promotion = 2;
+                printf("%c", 'b');
                 break;
             case W_QUEEN:
             case B_QUEEN:
-                promotion = 3;
+                printf("%c", 'q');
                 break;
             default:
                 eh_die("invalid promotion");
         }
-        printf("%c", promotions[promotion]);
     }
 
     if (new_line == 1){
