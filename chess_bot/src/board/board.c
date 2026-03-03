@@ -12,7 +12,7 @@
 
 int en_passant_squares[2][8] = {{40, 41, 42, 43, 44, 45, 46, 47}, {16, 17, 18, 19, 20, 21, 22, 23}};
 
-void cb_calculate_game_state(_board *board){
+void inline cb_calculate_game_state(_board *board){
     // checkmate, stalemate, 50 move rule
     if (board->in_check == 1 && board->move_count == 0){
         board->game_state = board->turn == WHITE ? B_WIN : W_WIN;
@@ -150,39 +150,6 @@ void cb_make_move(_board *board, _move move){
         board->piece_array[move.from] = NONE;
         board->zobrist_hash ^= piece_keys[move.to][move.piece] ^ piece_keys[move.from][move.piece];
 
-        // if the move is castling then update rook position
-        if (move.special_move == CASTLE){
-            switch (move.to){
-                case 2:
-                    board->bitboards[W_ROOK] ^= 9UL;
-                    board->piece_array[0] = NONE;
-                    board->piece_array[3] = W_ROOK;
-                    board->zobrist_hash ^= piece_keys[3][W_ROOK] ^ piece_keys[0][W_ROOK];
-                    break;
-                case 6:
-                    board->bitboards[W_ROOK] ^= 160UL;
-                    board->piece_array[7] = NONE;
-                    board->piece_array[5] = W_ROOK;
-                    board->zobrist_hash ^= piece_keys[5][W_ROOK] ^ piece_keys[7][W_ROOK];
-                    break;
-                case 58:
-                    board->bitboards[B_ROOK] ^= 648518346341351424UL;
-                    board->piece_array[56] = NONE;
-                    board->piece_array[59] = B_ROOK;
-                    board->zobrist_hash ^= piece_keys[59][B_ROOK] ^ piece_keys[56][B_ROOK];
-                    break;
-                case 62:
-                    board->bitboards[B_ROOK] ^= 11529215046068469760UL;
-                    board->piece_array[63] = NONE;
-                    board->piece_array[61] = B_ROOK;
-                    board->zobrist_hash ^= piece_keys[61][B_ROOK] ^ piece_keys[63][B_ROOK];
-                    break;
-            }
-            board->zobrist_hash ^= castling_keys[board->castling_rights];
-            board->castling_rights ^= board->turn == WHITE ? 3UL : 13UL;
-	        board->zobrist_hash ^= castling_keys[board->castling_rights];
-        }
-
         // check en passant and castling rights
         _piece piece = move.piece;
         if (piece == W_PAWN || piece == B_PAWN){
@@ -211,13 +178,41 @@ void cb_make_move(_board *board, _move move){
             board->zobrist_hash ^= castling_keys[board->castling_rights];
         }
         else if (piece == W_KING || piece == B_KING){
-	        // if move was castle then i dont need to do this
+	        if (move.special_move == CASTLE){
+                switch (move.to){
+                    case 2:
+                        board->bitboards[W_ROOK] ^= 9UL;
+                        board->piece_array[0] = NONE;
+                        board->piece_array[3] = W_ROOK;
+                        board->zobrist_hash ^= piece_keys[3][W_ROOK] ^ piece_keys[0][W_ROOK];
+                        break;
+                    case 6:
+                        board->bitboards[W_ROOK] ^= 160UL;
+                        board->piece_array[7] = NONE;
+                        board->piece_array[5] = W_ROOK;
+                        board->zobrist_hash ^= piece_keys[5][W_ROOK] ^ piece_keys[7][W_ROOK];
+                        break;
+                    case 58:
+                        board->bitboards[B_ROOK] ^= 648518346341351424UL;
+                        board->piece_array[56] = NONE;
+                        board->piece_array[59] = B_ROOK;
+                        board->zobrist_hash ^= piece_keys[59][B_ROOK] ^ piece_keys[56][B_ROOK];
+                        break;
+                    case 62:
+                        board->bitboards[B_ROOK] ^= 11529215046068469760UL;
+                        board->piece_array[63] = NONE;
+                        board->piece_array[61] = B_ROOK;
+                        board->zobrist_hash ^= piece_keys[61][B_ROOK] ^ piece_keys[63][B_ROOK];
+                        break;
+                }
+            }
+
             board->zobrist_hash ^= castling_keys[board->castling_rights];
             if (move.from == 4){
                 board->castling_rights &= ~3UL;
             }
             else if (move.from == 60){
-                board->castling_rights &= ~13UL;
+                board->castling_rights &= ~12UL;
             }
             board->zobrist_hash ^= castling_keys[board->castling_rights];
         }

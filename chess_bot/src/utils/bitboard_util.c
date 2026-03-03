@@ -3,7 +3,7 @@
 
 #include "utils/bitboard_util.h"
 
-int bb_pop_lsb(uint64_t * restrict mask){
+int bb_pop_lsb(uint64_t *restrict mask){
     if (*mask == 0){
         return 0;
     }
@@ -13,7 +13,7 @@ int bb_pop_lsb(uint64_t * restrict mask){
     return lsb;
 }
 
-int bb_pop_msb(uint64_t * restrict mask){
+int bb_pop_msb(uint64_t *restrict mask){
     if (*mask == 0){
         return 0;
     }
