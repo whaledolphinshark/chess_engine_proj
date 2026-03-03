@@ -33,18 +33,17 @@ _move mv_init_move(_board *board, int from, int to, _piece promotion){
     return move;
 }
 
-_move mv_uci_to_move(char *move_uci, _board *board, int validate, int *valid){
+_move mv_uci_to_move(char *move_uci, _board *board){
     int string_length = 0;
     _piece promotion = NONE;
     int from = 0;
     int to = 0;
-    *valid = 0;
     while (string_length < 6 && move_uci[string_length] != '\0'){
         string_length++;
     }
 
     if (string_length != 4 && string_length != 5){
-        _move none = {0, 0, NONE, NONE, NONE, 0};
+        _move none = {0, 0, NONE, NONE, NONE, NORMAL};
         return none;
     }
 
@@ -80,13 +79,6 @@ _move mv_uci_to_move(char *move_uci, _board *board, int validate, int *valid){
 
     _move move = mv_init_move(board, from, to, promotion);
 
-    if (validate == 1){
-        for (int i = 0; i < board->move_count; i++){
-            if (mv_moves_equal(move, board->move_pool[i]) == 1){
-                *valid = 1;
-            }
-        }
-    }
     return move;
 }
 

@@ -109,7 +109,7 @@ void cb_fen_to_board(_board *board, char *fen){
             en_passant_square += character - 'a';
         }
         else if (character >= '0' && character <= '9'){
-            en_passant_square += 8 * (character - '0');
+            en_passant_square += 8 * (character - '0' - 1);
         }
         else{
             en_passant_square = 0;
