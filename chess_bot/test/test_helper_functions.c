@@ -61,3 +61,7 @@ int helper_has_moves_from_square(_board *board, int square){
 
     return 0;
 }
+
+int helper_get_move_count(_board *board){
+    return board->move_count;
+}

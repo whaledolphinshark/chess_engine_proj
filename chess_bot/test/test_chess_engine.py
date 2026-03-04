@@ -37,6 +37,8 @@ funcs.helper_get_game_state.restype = ctypes.c_int
 funcs.helper_get_game_state.argtypes = [ctypes.POINTER(Board)]
 funcs.helper_has_moves_from_square.restype = ctypes.c_int
 funcs.helper_has_moves_from_square.argtypes = [ctypes.POINTER(Board), ctypes.c_int]
+funcs.helper_get_move_count.restype = ctypes.c_int
+funcs.helper_get_move_count.argtypes = [ctypes.POINTER(Board)]
 funcs.cb_fen_to_board.restype = None
 funcs.cb_fen_to_board.argtypes = [ctypes.POINTER(Board), ctypes.c_char_p]
 funcs.cb_board_to_fen.restype = None
@@ -57,10 +59,13 @@ max_move_uci_length = 6
 def convert_to_c_string(str, max):
     return ctypes.create_string_buffer(str.encode('utf-8'), max)
 
-def check_move_is_correct(board, move_uci, correct_position):
-    fen_buffer = convert_to_c_string("filler", max_fen_length)
+def play_move(board, move_uci):
     move = funcs.mv_uci_to_move(convert_to_c_string(move_uci, max_move_uci_length), board)
     funcs.cb_make_move(board, move)
+
+def check_move_is_correct(board, move_uci, correct_position):
+    fen_buffer = convert_to_c_string("filler", max_fen_length)
+    play_move(board, move_uci)
     funcs.cb_board_to_fen(board, fen_buffer)
     fen_to_check = convert_to_c_string(correct_position, max_fen_length)
     assert funcs.helper_are_fens_equal(fen_buffer, fen_to_check) == 1, f"{fen_buffer.value} != {fen_to_check.value}"
@@ -203,13 +208,33 @@ def test_pins():
     for test_case in test_cases_2:
         fen = convert_to_c_string(test_case[0], max_fen_length)
         funcs.cb_fen_to_board(board, fen)
-        for move in test_case[1]:
-            check_move_in_position(board, move)
-        for move in test_case[2]:
-            check_move_not_in_position(board, move)
+        for move_uci in test_case[1]:
+            check_move_in_position(board, move_uci)
+        for move_uci in test_case[2]:
+            check_move_not_in_position(board, move_uci)
 
 def test_checks():
-    pass
+    test_cases = [("4k3/8/3P4/8/8/8/8/4K3 w - - 0 1", "d6d7", ["e8e7", "e8d8", "e8f8", "e8d7", "e8f7"], 5),
+                  ("4k3/3ppn2/r6q/8/4N3/b7/8/4K3 w - - 0 1", "e4d6", ["a3d6", "a6d6", "e7d6", "f7d6", "h6d6"], 7),
+                  ("8/2pk4/8/8/2B5/6P1/8/4K3 w - - 0 1", "c4b5", ["d7d6", "d7d8", "d7e7", "d7c8", "d7e6", "c7c6"], 6),
+                  ("8/2p5/8/4k3/8/8/1R6/4K3 w - - 0 1", "b2b5", ["e5d6", "e5d4", "e5e6", "e5e4", "e5f6", "e5f4", "c7c5"], 7),
+                  ("8/4k3/8/8/8/8/2Q5/4K3 w - - 0 1", "c2c7", ["e7e6", "e7e8", "e7f6", "e7f8"], 4),
+                  ("4k3/8/r7/8/4B3/5q2/4R3/4K3 w - - 0 1", "e4c6", ["e8d8", "e8f8", "e8f7"], 3),
+                  ("4k3/8/8/4B3/8/2q1R3/8/7K w - - 0 1", "e5c7", ["c3e3", "e8d7", "e8f8", "e8f7"], 5),
+                  ("8/4k3/8/3pP3/8/8/8/4K3 w - d6 0 1", "e5d6", ["e7e8", "e7e6", "e7d7", "e7d8", "e7d6", "e7f7", "e7f8", "e7f6"], 8)]
+    board = funcs.cb_create_board()
+    for test_case in test_cases:
+        fen = convert_to_c_string(test_case[0], max_fen_length)
+        funcs.cb_fen_to_board(board, fen)
+        check_move_in_position(board, test_case[1])
+        play_move(board, test_case[1])
+        for move_uci in test_case[2]:
+            check_move_in_position(board, move_uci)
+        assert funcs.helper_get_move_count(board) == test_case[3], "number of moves on board not equal to what is predicted"
 
 def test_game_end():
+    pass
+
+# test largest fen you can make
+def test_fen():
     pass
