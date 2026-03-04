@@ -145,6 +145,7 @@ void cb_fen_to_board(_board *board, char *fen){
     tt_insert_item(board->history, board->zobrist_hash, &one);
 
     // game state
+    board->game_state = ONGOING;
     cb_calculate_game_state(board);
 }
 
@@ -177,7 +178,7 @@ void cb_board_to_fen(_board *board, char *buffer){
             empty_spaces = 0;
         }
         if (i != 0){
-            strncat(buffer, "/", 1);
+            strncat(buffer, "/", 2);
         }
     }
 
@@ -244,7 +245,7 @@ void cb_board_to_fen(_board *board, char *buffer){
         eh_die("value was truncated");
     }
     strncat(buffer, str, 5);
-    strncat(buffer, " ", 1);
+    strncat(buffer, " ", 2);
     value = snprintf(str, sizeof(str), "%d", board->fullmove_clock);
     if (value >= sizeof(str)){
         eh_die("value was truncated");

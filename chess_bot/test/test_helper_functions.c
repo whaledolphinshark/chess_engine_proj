@@ -42,3 +42,22 @@ int helper_are_fens_equal(char *left, char *right){
     
     return 1;
 }
+
+int helper_is_in_check(_board *board){
+    return board->in_check;
+}
+
+int helper_get_game_state(_board *board){
+    return board->game_state;
+}
+
+int helper_has_moves_from_square(_board *board, int square){
+    for (int i = 0; i < board->move_count; i++){
+        _move move = board->move_pool[i];
+        if (move.from == square){
+            return 1;
+        }
+    }
+
+    return 0;
+}
