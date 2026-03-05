@@ -212,27 +212,27 @@ def test_checks():
     check_move_in_position(board, "g2h1")
     assert funcs.helper_get_move_count(board) == 1, "number of moves on board not equal to what is predicted"
 
-# def test_stalemate():
-#     test_cases = [("7k/8/5QK1/8/8/8/8/8 w - - 0 1", "f6f7", 0),
-#                   ("7k/8/6Q1/8/8/8/8/K7 w - - 0 1", "a1b1", 0),
-#                   ("8/8/8/8/6q1/8/5k2/7K b - - 0 1", "g4g3", 0),
-#                   ("k7/8/8/8/8/6q1/8/7K b - - 0 1", "a8b8", 0),
-#                   ("7k/8/2p2QK1/1prp4/1PpPp3/2P1P3/8/8 w - - 0 1", "f6f7", 0),
-#                   ("7k/1p1p4/pP1PpQK1/P1n1P3/p3p3/Pp1pP3/1P1P4/8 w - - 0 1", "f6f7", 0),
-#                   ("8/8/8/2p1p3/2P1Pq2/2pBp1k1/2P1P3/7K b - - 0 1", "f4f2", 0),
-#                   ("7k/r7/6K1/5Q2/8/8/8/8 w - - 0 1", "f5f7", 2),
-#                   ("7k/5Q2/6K1/8/1p6/1P6/2P5/8 w - - 0 1", "c2c4", 2)]
+def test_stalemate():
+    test_cases = [("7k/8/5QK1/8/8/8/8/8 w - - 0 1", "f6f7", 0),
+                  ("7k/8/6Q1/8/8/8/8/K7 w - - 0 1", "a1b1", 0),
+                  ("8/8/8/8/6q1/8/5k2/7K b - - 0 1", "g4g3", 0),
+                  ("k7/8/8/8/8/6q1/8/7K b - - 0 1", "a8b8", 0),
+                  ("7k/8/2p2QK1/1prp4/1PpPp3/2P1P3/8/8 w - - 0 1", "f6f7", 0),
+                  ("7k/1p1p4/pP1PpQK1/P1n1P3/p3p3/Pp1pP3/1P1P4/8 w - - 0 1", "f6f7", 0),
+                  ("8/8/8/2p1p3/2P1Pq2/2pBp1k1/2P1P3/7K b - - 0 1", "f4f2", 0),
+                  ("7k/r7/6K1/5Q2/8/8/8/8 w - - 0 1", "f5f7", 2),
+                  ("7k/5Q2/6K1/8/1p6/1P6/2P5/8 w - - 0 1", "c2c4", 2)]
 
-#     board = funcs.cb_create_board()
-#     for test_case in test_cases:
-#         fen = convert_to_c_string(test_case[0], max_fen_length)
-#         funcs.cb_fen_to_board(board, fen)
-#         check_move_in_position(board, test_case[1])
-#         play_move(board, test_case[1])
-#         if test_case[2] == 0:
-#             assert funcs.helper_get_game_state(board) == 0, "game did not end in stalemate"
-#         else:
-#             assert funcs.helper_get_game_state(board) == 2, "game is not ongoing"
+    board = funcs.cb_create_board()
+    for test_case in test_cases:
+        fen = convert_to_c_string(test_case[0], max_fen_length)
+        funcs.cb_fen_to_board(board, fen)
+        check_move_in_position(board, test_case[1])
+        play_move(board, test_case[1])
+        if test_case[2] == 0:
+            assert funcs.helper_get_game_state(board) == 0, "game did not end in stalemate"
+        else:
+            assert funcs.helper_get_game_state(board) == 2, "game is not ongoing"
 
 def test_insufficient_material():
     pass
