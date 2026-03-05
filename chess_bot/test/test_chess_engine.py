@@ -78,7 +78,12 @@ def check_move_not_in_position(board, move_uci):
     fen_buffer = convert_to_c_string("filler", max_fen_length)
     move = convert_to_c_string(move_uci, max_move_uci_length)
     funcs.cb_board_to_fen(board, fen_buffer)
-    assert funcs.helper_find_move(board, move) == -1, f"{fen_buffer.value} contains illegal move: {move_uci}"
+    assert funcs.helper_find_move(board, move) == -1, f"position: {fen_buffer.value} contains illegal move: {move_uci}"
+
+def check_game_state(board, expected_game_state):
+    fen_buffer = convert_to_c_string("filler", max_fen_length)
+    funcs.cb_board_to_fen(board, fen_buffer)
+    assert funcs.helper_get_game_state(board) == expected_game_state, f"game state of position {fen_buffer.value} != {expected_game_state}"
 
 def test_make_board():
     board = funcs.cb_create_board()
@@ -222,20 +227,34 @@ def test_stalemate():
                   ("8/8/8/2p1p3/2P1Pq2/2pBp1k1/2P1P3/7K b - - 0 1", "f4f2", 0),
                   ("7k/r7/6K1/5Q2/8/8/8/8 w - - 0 1", "f5f7", 2),
                   ("7k/5Q2/6K1/8/1p6/1P6/2P5/8 w - - 0 1", "c2c4", 2)]
-
     board = funcs.cb_create_board()
     for test_case in test_cases:
         fen = convert_to_c_string(test_case[0], max_fen_length)
         funcs.cb_fen_to_board(board, fen)
         check_move_in_position(board, test_case[1])
         play_move(board, test_case[1])
-        if test_case[2] == 0:
-            assert funcs.helper_get_game_state(board) == 0, "game did not end in stalemate"
-        else:
-            assert funcs.helper_get_game_state(board) == 2, "game is not ongoing"
+        check_game_state(board, test_case[2])
 
 def test_insufficient_material():
-    pass
+    test_cases = [("7k/8/3p4/1N6/8/8/8/4K3 w - - 0 1", "b5d6", 0),
+                  ("7k/8/8/5n2/8/6P1/8/4K3 b - - 0 1", "f5g3", 0),
+                  ("7k/8/8/4B3/8/6p1/8/4K3 w - - 0 1", "e5g3", 0),
+                  ("7k/8/8/4b3/8/6P1/8/4K3 b - - 0 1", "e5g3", 0),
+                  ("7k/8/8/8/6R1/6p1/8/4K3 w - - 0 1", "g4g3", 2),
+                  ("7k/8/8/8/6r1/6P1/8/4K3 b - - 0 1", "g4g3", 2),
+                  ("7k/8/8/8/8/6p1/7P/4K3 w - - 0 1", "h2g3", 2),
+                  ("7k/8/8/8/8/6p1/7P/4K3 b - - 0 1", "g3h2", 2),
+                  ("7k/8/8/8/8/8/5q2/4K3 w - - 0 1", "e1f2", 0),
+                  ("7k/6Q1/8/8/8/8/8/4K3 b - - 0 1", "h8g7", 0),
+                  ("7k/8/8/2B5/3p4/8/7b/4K3 w - - 0 1", "c5d4", 0),
+                  ("7k/8/8/2B5/3p2b1/8/8/4K3 w - - 0 1", "c5d4", 2)]
+    board = funcs.cb_create_board()
+    for test_case in test_cases:
+        fen = convert_to_c_string(test_case[0], max_fen_length)
+        funcs.cb_fen_to_board(board, fen)
+        check_move_in_position(board, test_case[1])
+        play_move(board, test_case[1])
+        check_game_state(board, test_case[2])
 
 def test_50_move_rule():
     pass

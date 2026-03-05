@@ -39,15 +39,15 @@ void inline cb_calculate_game_state(_board *board){
     if (num_pieces == 2 || (num_pieces == 3 && (num_knights == 1 || num_bishops == 1))){
         board->game_state = DRAW;
     }
-    else if (num_pieces == 4 && bb_get_bits_set(board->bitboards[W_BISHOP]) == 1 && bb_get_bits_set(board->bitboards[B_BISHOP] == 1)){
+    else if (num_pieces == 4 && bb_get_bits_set(board->bitboards[W_BISHOP]) == 1 && bb_get_bits_set(board->bitboards[B_BISHOP]) == 1){
         // KB vs KB (same color bishops)
         int w_bishop_square = bb_get_lsb(board->bitboards[W_BISHOP]) - 1;
         int b_bishop_square = bb_get_lsb(board->bitboards[B_BISHOP]) - 1;
         int wb_rank = w_bishop_square / 8;
         int bb_rank = b_bishop_square / 8;
         int wb_file = w_bishop_square % 8;
-        int bb_file = w_bishop_square % 8;
-        if ((abs(wb_rank - bb_rank) + abs(wb_file - bb_file)) % 2 == 0){
+        int bb_file = b_bishop_square % 8;
+        if ((abs(wb_rank - bb_rank) % 2 == 0) && (abs(wb_file - bb_file) % 2 == 0)){
             board->game_state = DRAW;
         }
     }
