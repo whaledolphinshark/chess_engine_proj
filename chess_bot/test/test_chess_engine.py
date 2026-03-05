@@ -61,6 +61,10 @@ def play_move(board, move_uci):
     move = funcs.mv_uci_to_move(convert_to_c_string(move_uci, max_move_uci_length), board)
     funcs.cb_make_move(board, move)
 
+def set_board(board, position):
+    fen = convert_to_c_string(position, max_fen_length)
+    funcs.cb_fen_to_board(board, fen)
+
 def check_move_is_correct(board, move_uci, correct_position):
     fen_buffer = convert_to_c_string("filler", max_fen_length)
     play_move(board, move_uci)
@@ -110,8 +114,7 @@ def test_castling():
             ("r3k2r/8/8/8/8/8/8/R3K2R b Kq - 0 1", [2], [0, 1, 3])]
     board = funcs.cb_create_board()
     for test_case in test_cases_1:
-        fen = convert_to_c_string(test_case[0], max_fen_length)
-        funcs.cb_fen_to_board(board, fen)
+        set_board(board, test_case[0])
         for castle_move_index in test_case[1]:
             check_move_in_position(board, castles[castle_move_index])
         for castle_move_index in test_case[2]:
@@ -128,7 +131,7 @@ def test_castling():
                 ("r3k2r/pp3ppp/1qnbb2n/2P1NQ2/2pPp3/B3P2N/P1P2PPP/R3K2R b Kkq - 0 1", "a8b8", "1r2k2r/pp3ppp/1qnbb2n/2P1NQ2/2pPp3/B3P2N/P1P2PPP/R3K2R w Kk - 1 2"), 
                 ("r3k2r/pp3ppp/1qnbb2n/2P1NQ2/2pPp3/B3P2N/P1P2PPP/R3K2R w KQk - 0 1", "e1c1", "r3k2r/pp3ppp/1qnbb2n/2P1NQ2/2pPp3/B3P2N/P1P2PPP/2KR3R b k - 1 1")]
     for test_case in test_cases_2:
-        funcs.cb_fen_to_board(board, convert_to_c_string(test_case[0], max_fen_length))
+        set_board(board, test_case[0])
         check_move_is_correct(board, test_case[1], test_case[2])
 
 def test_en_passant():
@@ -141,8 +144,7 @@ def test_en_passant():
 
     board = funcs.cb_create_board()
     for test_case in test_cases:
-        fen = convert_to_c_string(test_case[0], max_fen_length)
-        funcs.cb_fen_to_board(board, fen)
+        set_board(board, test_case[0])
         if test_case[1] == "":
             check_move_not_in_position(board, test_case[1])
         else:
@@ -150,7 +152,7 @@ def test_en_passant():
             check_move_is_correct(board, test_case[1], test_case[2])
     
     # play other move and see if en passant is gone
-    funcs.cb_fen_to_board(board, convert_to_c_string("4k3/8/8/3pP3/8/8/8/4K3 w - d6 0 1", max_fen_length))
+    set_board(board, "4k3/8/8/3pP3/8/8/8/4K3 w - d6 0 1")
     check_move_is_correct(board, "e1d1", "4k3/8/8/3pP3/8/8/8/3K4 b - - 1 1")
     check_move_is_correct(board, "e8f8", "5k2/8/8/3pP3/8/8/8/3K4 w - - 2 2")
 
@@ -162,9 +164,8 @@ def test_promotions():
 
     board = funcs.cb_create_board()
     for test_case in test_cases:
-        fen = convert_to_c_string(test_case[0], max_fen_length)
         for promotion in promotions:
-            funcs.cb_fen_to_board(board, fen)
+            set_board(board, test_case[0])
             promotion_move = test_case[1].replace('*', promotion)
             fen_to_check = test_case[2].replace('*', promotion.upper() if 'w' in test_case[0] else promotion)
             check_move_in_position(board, promotion_move)
@@ -184,8 +185,7 @@ def test_pins():
 
     board = funcs.cb_create_board()
     for test_case in test_cases:
-        fen = convert_to_c_string(test_case[0], max_fen_length)
-        funcs.cb_fen_to_board(board, fen)
+        set_board(board, test_case[0])
         for move_uci in test_case[1]:
             check_move_in_position(board, move_uci)
         assert funcs.helper_get_move_count(board) == test_case[2], f"position: {test_case[0]} contains wrong number of moves"
@@ -203,8 +203,7 @@ def test_checks():
                   ("8/P1k5/8/8/8/8/7P/6K1 w - - 0 1","a7a8n", ["c7b7", "c7b8", "c7c8", "c7d8", "c7d7", "c7d6", "c7c6"], 7)]
     board = funcs.cb_create_board()
     for test_case in test_cases:
-        fen = convert_to_c_string(test_case[0], max_fen_length)
-        funcs.cb_fen_to_board(board, fen)
+        set_board(board, test_case[0])
         check_move_in_position(board, test_case[1])
         play_move(board, test_case[1])
         for move_uci in test_case[2]:
@@ -212,8 +211,7 @@ def test_checks():
         assert funcs.helper_get_move_count(board) == test_case[3], "number of moves on board not equal to what is predicted"
 
     # make sure king cannot move into check
-    fen = convert_to_c_string("7k/8/2b5/5n1r/8/5rpn/6K1/8 w - - 0 1", max_fen_length)
-    funcs.cb_fen_to_board(board, fen)
+    set_board(board, "7k/8/2b5/5n1r/8/5rpn/6K1/8 w - - 0 1")
     check_move_in_position(board, "g2h1")
     assert funcs.helper_get_move_count(board) == 1, "number of moves on board not equal to what is predicted"
 
@@ -229,8 +227,7 @@ def test_stalemate():
                   ("7k/5Q2/6K1/8/1p6/1P6/2P5/8 w - - 0 1", "c2c4", 2)]
     board = funcs.cb_create_board()
     for test_case in test_cases:
-        fen = convert_to_c_string(test_case[0], max_fen_length)
-        funcs.cb_fen_to_board(board, fen)
+        set_board(board, test_case[0])
         check_move_in_position(board, test_case[1])
         play_move(board, test_case[1])
         check_game_state(board, test_case[2])
@@ -250,14 +247,25 @@ def test_insufficient_material():
                   ("7k/8/8/2B5/3p2b1/8/8/4K3 w - - 0 1", "c5d4", 2)]
     board = funcs.cb_create_board()
     for test_case in test_cases:
-        fen = convert_to_c_string(test_case[0], max_fen_length)
-        funcs.cb_fen_to_board(board, fen)
+        set_board(board, test_case[0])
         check_move_in_position(board, test_case[1])
         play_move(board, test_case[1])
         check_game_state(board, test_case[2])
 
 def test_50_move_rule():
-    pass
+    test_cases = [("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 99 1", "e2e4", 2),
+                  ("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR b KQkq - 99 1", "e7e6", 2),
+                  ("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 99 1", "b1a3", 0),
+                  ("r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 99 1", "e1c1", 0),
+                  ("r3k2r/8/8/8/8/8/8/R3K2R b KQkq - 99 1", "e8c8", 0),
+                  ("r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 99 1", "a1a8", 2),
+                  ("r3k2r/8/8/8/8/8/8/R3K2R b KQkq - 99 1", "a8a1", 2)]
+    board = funcs.cb_create_board()
+    for test_case in test_cases:
+        set_board(board, test_case[0])
+        check_move_in_position(board, test_case[1])
+        play_move(board, test_case[1])
+        check_game_state(board, test_case[2])
 
 def test_repetition():
     pass
