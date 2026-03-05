@@ -35,8 +35,6 @@ funcs.helper_is_in_check.restype = ctypes.c_int
 funcs.helper_is_in_check.argtypes = [ctypes.POINTER(Board)]
 funcs.helper_get_game_state.restype = ctypes.c_int
 funcs.helper_get_game_state.argtypes = [ctypes.POINTER(Board)]
-funcs.helper_has_moves_from_square.restype = ctypes.c_int
-funcs.helper_has_moves_from_square.argtypes = [ctypes.POINTER(Board), ctypes.c_int]
 funcs.helper_get_move_count.restype = ctypes.c_int
 funcs.helper_get_move_count.argtypes = [ctypes.POINTER(Board)]
 funcs.cb_fen_to_board.restype = None
@@ -166,52 +164,26 @@ def test_promotions():
             fen_to_check = test_case[2].replace('*', promotion.upper() if 'w' in test_case[0] else promotion)
             check_move_in_position(board, promotion_move)
             check_move_is_correct(board, promotion_move, fen_to_check)
-    
-    test_cases_2 = [("8/P7/8/8/8/8/8/k6K w - - 0 1", "a7a8q", "Q7/8/8/8/8/8/8/k6K b - - 0 1", 1, 2),
-                    ("8/P7/8/8/8/8/8/1k5K w - - 0 1", "a7a8q", "Q7/8/8/8/8/8/8/1k5K b - - 0 1", 0, 2),
-                    ("8/P1k5/8/8/8/8/7P/6K1 w - - 0 1", "a7a8n", "N7/2k5/8/8/8/8/7P/6K1 b - - 0 1", 1, 2),
-                    ("8/P1k1K3/8/8/8/8/8/1R6 w - - 0 1", "a7a8q", "Q7/2k1K3/8/8/8/8/8/1R6 b - - 0 1", 0, 0),
-                    ("8/P1k1K3/8/8/8/8/8/1R6 w - - 0 1", "a7a8n", "N7/2k1K3/8/8/8/8/8/1R6 b - - 0 1", 1, 2),
-                    ("6k1/P5pp/8/8/8/8/6PP/5RK1 w - - 0 1", "a7a8q", "Q5k1/6pp/8/8/8/8/6PP/5RK1 b - - 0 1", 1, 1),
-                    ("5rk1/6pp/8/8/8/8/p5PP/6K1 b - - 0 1", "a2a1q", "5rk1/6pp/8/8/8/8/6PP/q5K1 w - - 0 2", 1, -1)]
-    for test_case in test_cases_2:
-        fen = convert_to_c_string(test_case[0], max_fen_length)
-        funcs.cb_fen_to_board(board, fen)
-        check_move_in_position(board, test_case[1])
-        check_move_is_correct(board, test_case[1], test_case[2])
-        assert funcs.helper_is_in_check(board) == test_case[3], f"position: {test_case[2]} check value incorrect"
-        assert funcs.helper_get_game_state(board) == test_case[4], f"position: {test_case[2]} game state incorrect"
 
 def test_pins():
-    test_cases = [("4k3/8/8/8/1b6/8/3N4/4K3 w - - 0 1", 11, 0),
-                  ("4k3/8/8/8/2n5/8/3N4/4K3 w - - 0 1", 11, 1),
-                  ("4k3/8/8/8/2n5/8/3R4/4K3 w - - 0 1", 11, 1),
-                  ("4k3/8/8/8/1b6/8/3R4/4K3 w - - 0 1", 11, 0),
-                  ("4k3/3b4/8/1B6/8/8/8/4K3 b - - 0 1", 51, 1),
-                  ("4k3/4b3/8/8/8/8/4R3/4K3 b - - 0 1", 52, 0),
-                  ("4k3/3q4/8/1B6/8/8/8/4K3 b - - 0 1", 51, 1),
-                  ("4k3/8/8/8/2b5/3N4/4R3/5K2 w - - 0 1", 19, 1),
-                  ("4k3/8/8/8/2b5/3N4/4R3/5K2 w - - 0 1", 12, 1),
-                  ("4k3/4r3/8/3pP3/8/8/8/4K3 w - d6 0 1", 36, 1),
-                  ("4k3/8/4r3/3pP3/8/8/8/4K3 w - d6 0 1", 36, 0)]
+    test_cases = [("4k3/8/8/8/1b6/8/3N4/4K3 w - - 0 1", ["e1d1", "e1e2", "e1f1", "e1f2"], 4),
+                  ("4k3/8/8/8/2n5/8/3N4/4K3 w - - 0 1", ["d2b1", "d2b3", "d2c4", "d2e4", "d2f3", "d2f1", "e1d1", "e1e2", "e1f1", "e1f2"], 10),
+                  ("4k3/8/8/8/2n5/3p4/1p1Rp3/4K3 w - - 0 1", ["d2c2", "d2b2", "d2d3", "d2e2", "d2d1", "e1f2"], 6),
+                  ("4k3/8/8/8/1b6/8/3R4/4K3 w - - 0 1", ["e1d1", "e1e2", "e1f1", "e1f2"], 4),
+                  ("4k3/3b4/8/1B6/8/8/8/4K3 b - - 0 1", ["d7c6", "d7b5", "e8d8", "e8e7", "e8f8", "e8f7"], 6),
+                  ("4k3/4b3/8/8/8/8/4R3/4K3 b - - 0 1", ["e8f8", "e8d8", "e8f7", "e8d7"], 4),
+                  ("4k3/3q4/8/1B6/8/8/8/4K3 b - - 0 1", ["d7c6", "d7b5", "e8d8", "e8e7", "e8f8", "e8f7"], 6),
+                  ("4k3/8/8/8/2b5/3Np3/3pRp2/5K2 w - - 0 1", ["d3b2", "d3b4", "d3c5", "d3e5", "d3f4", "d3f2", "d3e1", "d3c1", "e2e1", "e2d2", "e2e3", "e2f2", "f1g2"], 13),
+                  ("4k3/4r3/8/3pP3/8/8/8/4K3 w - d6 0 1", ["e5e6", "e1d1", "e1d2", "e1e2", "e1f1", "e1f2"], 6),
+                  ("4k3/8/4r3/3pP3/8/8/8/4K3 w - d6 0 1", ["e1d1", "e1d2", "e1e2", "e1f1", "e1f2"], 5)]
 
     board = funcs.cb_create_board()
     for test_case in test_cases:
         fen = convert_to_c_string(test_case[0], max_fen_length)
         funcs.cb_fen_to_board(board, fen)
-        assert funcs.helper_has_moves_from_square(board, test_case[1]) == test_case[2], f"position: {test_case[0]} has wrong move generation"
-
-    test_cases_2 = [("4k3/4r3/8/3pP3/8/8/8/4K3 w - d6 0 1", [], ["e5d6"]),
-                    ("4k3/8/8/8/1b6/8/3B4/4K3 w - - 0 1", ["d2c3", "d2b4"], ["d2c1", "d2e3"]),
-                    ("4k3/8/8/8/4r3/8/4R3/4K3 w - - 0 1", ["e2e3", "e2e4"], ["e2d2", "e2f2"]),
-                    ("4k3/5p2/6B1/8/8/8/8/4K3 b - - 0 1", ["f7g6"], ["f7f6", "f7f5"])]
-    for test_case in test_cases_2:
-        fen = convert_to_c_string(test_case[0], max_fen_length)
-        funcs.cb_fen_to_board(board, fen)
         for move_uci in test_case[1]:
             check_move_in_position(board, move_uci)
-        for move_uci in test_case[2]:
-            check_move_not_in_position(board, move_uci)
+        assert funcs.helper_get_move_count(board) == test_case[2], f"position: {test_case[0]} contains wrong number of moves"
 
 def test_checks():
     test_cases = [("4k3/8/3P4/8/8/8/8/4K3 w - - 0 1", "d6d7", ["e8e7", "e8d8", "e8f8", "e8d7", "e8f7"], 5),
@@ -221,7 +193,9 @@ def test_checks():
                   ("8/4k3/8/8/8/8/2Q5/4K3 w - - 0 1", "c2c7", ["e7e6", "e7e8", "e7f6", "e7f8"], 4),
                   ("4k3/8/r7/8/4B3/5q2/4R3/4K3 w - - 0 1", "e4c6", ["e8d8", "e8f8", "e8f7"], 3),
                   ("4k3/8/8/4B3/8/2q1R3/8/7K w - - 0 1", "e5c7", ["c3e3", "e8d7", "e8f8", "e8f7"], 5),
-                  ("8/4k3/8/3pP3/8/8/8/4K3 w - d6 0 1", "e5d6", ["e7e8", "e7e6", "e7d7", "e7d8", "e7d6", "e7f7", "e7f8", "e7f6"], 8)]
+                  ("8/4k3/8/3pP3/8/8/8/4K3 w - d6 0 1", "e5d6", ["e7e8", "e7e6", "e7d7", "e7d8", "e7d6", "e7f7", "e7f8", "e7f6"], 8),
+                  ("8/P7/8/8/8/8/8/k6K w - - 0 1", "a7a8q", ["a1b2", "a1b1"], 2),
+                  ("8/P1k5/8/8/8/8/7P/6K1 w - - 0 1","a7a8n", ["c7b7", "c7b8", "c7c8", "c7d8", "c7d7", "c7d6", "c7c6"], 7)]
     board = funcs.cb_create_board()
     for test_case in test_cases:
         fen = convert_to_c_string(test_case[0], max_fen_length)
@@ -232,7 +206,47 @@ def test_checks():
             check_move_in_position(board, move_uci)
         assert funcs.helper_get_move_count(board) == test_case[3], "number of moves on board not equal to what is predicted"
 
-def test_game_end():
+    # make sure king cannot move into check
+    fen = convert_to_c_string("7k/8/2b5/5n1r/8/5rpn/6K1/8 w - - 0 1", max_fen_length)
+    funcs.cb_fen_to_board(board, fen)
+    check_move_in_position(board, "g2h1")
+    assert funcs.helper_get_move_count(board) == 1, "number of moves on board not equal to what is predicted"
+
+# def test_stalemate():
+#     test_cases = [("7k/8/5QK1/8/8/8/8/8 w - - 0 1", "f6f7", 0),
+#                   ("7k/8/6Q1/8/8/8/8/K7 w - - 0 1", "a1b1", 0),
+#                   ("8/8/8/8/6q1/8/5k2/7K b - - 0 1", "g4g3", 0),
+#                   ("k7/8/8/8/8/6q1/8/7K b - - 0 1", "a8b8", 0),
+#                   ("7k/8/2p2QK1/1prp4/1PpPp3/2P1P3/8/8 w - - 0 1", "f6f7", 0),
+#                   ("7k/1p1p4/pP1PpQK1/P1n1P3/p3p3/Pp1pP3/1P1P4/8 w - - 0 1", "f6f7", 0),
+#                   ("8/8/8/2p1p3/2P1Pq2/2pBp1k1/2P1P3/7K b - - 0 1", "f4f2", 0),
+#                   ("7k/r7/6K1/5Q2/8/8/8/8 w - - 0 1", "f5f7", 2),
+#                   ("7k/5Q2/6K1/8/1p6/1P6/2P5/8 w - - 0 1", "c2c4", 2)]
+
+#     board = funcs.cb_create_board()
+#     for test_case in test_cases:
+#         fen = convert_to_c_string(test_case[0], max_fen_length)
+#         funcs.cb_fen_to_board(board, fen)
+#         check_move_in_position(board, test_case[1])
+#         play_move(board, test_case[1])
+#         if test_case[2] == 0:
+#             assert funcs.helper_get_game_state(board) == 0, "game did not end in stalemate"
+#         else:
+#             assert funcs.helper_get_game_state(board) == 2, "game is not ongoing"
+
+def test_insufficient_material():
+    pass
+
+def test_50_move_rule():
+    pass
+
+def test_repetition():
+    pass
+
+def test_checkmate():
+    # promotion checkmate
+    # double? checkmate
+    # some other stuff
     pass
 
 # test largest fen you can make

@@ -51,17 +51,6 @@ int helper_get_game_state(_board *board){
     return board->game_state;
 }
 
-int helper_has_moves_from_square(_board *board, int square){
-    for (int i = 0; i < board->move_count; i++){
-        _move move = board->move_pool[i];
-        if (move.from == square){
-            return 1;
-        }
-    }
-
-    return 0;
-}
-
 int helper_get_move_count(_board *board){
     return board->move_count;
 }
