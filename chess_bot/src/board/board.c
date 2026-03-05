@@ -274,13 +274,15 @@ void cb_make_move(_board *board, _move move){
     cb_calculate_game_state(board);
 }
 
-void cb_undo_move(_move move, _board *board){
-    unsigned long prev_moves_count = gl_size_of_list(board->previous_moves);
+void cb_undo_move(_board *board, _move move){
+    unsigned long prev_moves_count = gl_get_length(board->previous_moves);
     if (prev_moves_count == 0){
         eh_die("no moves to undo");
     }
+
     _move_state prev_move_state = *((_move_state *)gl_access_item(board->previous_moves, prev_moves_count - 1));
     if (mv_moves_equal(move, prev_move_state.move) != 1){
+        printf("%d %d %d, %d %d %d\n", move.to, move.from, move.special_move, prev_move_state.move.to, prev_move_state.move.from, prev_move_state.move.special_move);
         eh_die("cannot undo move that was not played");
     }
 

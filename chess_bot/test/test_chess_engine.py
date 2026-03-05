@@ -45,6 +45,8 @@ funcs.cb_create_board.restype = ctypes.POINTER(Board)
 funcs.cb_create_board.argtypes = []
 funcs.cb_make_move.restype = None
 funcs.cb_make_move.argtypes = [ctypes.POINTER(Board), Move]
+funcs.cb_undo_move.restype = None
+funcs.cb_undo_move.argtypes = [ctypes.POINTER(Board), Move]
 funcs.mv_uci_to_move.restype = Move
 funcs.mv_uci_to_move.argtypes = [ctypes.c_char_p, ctypes.POINTER(Board)]
 funcs.init_chess_engine.restype = None
@@ -60,6 +62,7 @@ def convert_to_c_string(str, max):
 def play_move(board, move_uci):
     move = funcs.mv_uci_to_move(convert_to_c_string(move_uci, max_move_uci_length), board)
     funcs.cb_make_move(board, move)
+    return move
 
 def set_board(board, position):
     fen = convert_to_c_string(position, max_fen_length)
@@ -67,7 +70,16 @@ def set_board(board, position):
 
 def check_move_is_correct(board, move_uci, correct_position):
     fen_buffer = convert_to_c_string("filler", max_fen_length)
-    play_move(board, move_uci)
+    move = funcs.mv_uci_to_move(convert_to_c_string(move_uci, max_move_uci_length), board)
+    funcs.cb_make_move(board, move)
+    funcs.cb_board_to_fen(board, fen_buffer)
+    fen_to_check = convert_to_c_string(correct_position, max_fen_length)
+    assert funcs.helper_are_fens_equal(fen_buffer, fen_to_check) == 1, f"{fen_buffer.value} != {fen_to_check.value}"
+    return move
+
+def check_undo_move_is_correct(board, move, correct_position):
+    fen_buffer = convert_to_c_string("filler", max_fen_length)
+    funcs.cb_undo_move(board, move)
     funcs.cb_board_to_fen(board, fen_buffer)
     fen_to_check = convert_to_c_string(correct_position, max_fen_length)
     assert funcs.helper_are_fens_equal(fen_buffer, fen_to_check) == 1, f"{fen_buffer.value} != {fen_to_check.value}"
@@ -93,9 +105,6 @@ def test_make_board():
     board = funcs.cb_create_board()
     assert board is not None
     assert isinstance(board, ctypes.POINTER(Board))
-
-def test_make_and_undo_move():
-    pass
 
 def test_castling():
     castles = ["e1c1", "e1g1", "e8c8", "e8g8"]
@@ -132,15 +141,17 @@ def test_castling():
                 ("r3k2r/pp3ppp/1qnbb2n/2P1NQ2/2pPp3/B3P2N/P1P2PPP/R3K2R w KQk - 0 1", "e1c1", "r3k2r/pp3ppp/1qnbb2n/2P1NQ2/2pPp3/B3P2N/P1P2PPP/2KR3R b k - 1 1")]
     for test_case in test_cases_2:
         set_board(board, test_case[0])
-        check_move_is_correct(board, test_case[1], test_case[2])
+        move = check_move_is_correct(board, test_case[1], test_case[2])
+        check_undo_move_is_correct(board, move, test_case[0])
+
 
 def test_en_passant():
     test_cases = [("4k3/8/8/3pP3/8/8/8/4K3 w - d6 0 1", "e5d6", "4k3/8/3P4/8/8/8/8/4K3 b - - 0 1"), 
-                            ("k3r3/8/8/3pP3/8/8/8/4K3 w - d6 0 1", "", ""), 
-                            ("k7/8/8/2pPp3/8/8/8/4K3 w - c6 0 1", "d5c6", "k7/8/2P5/4p3/8/8/8/4K3 b - - 0 1"), 
-                            ("8/8/8/3pP3/8/8/8/k4K2 w - - 0 1", "", ""), 
-                            ("8/8/8/8/3pP3/8/8/k4K2 b - e3 0 1", "d4e3", "8/8/8/8/8/4p3/8/k4K2 w - - 0 2"), 
-                            ("3k4/8/8/8/3pP3/8/8/3R1K2 b - e3 0 1", "", "")]
+                  ("k3r3/8/8/3pP3/8/8/8/4K3 w - d6 0 1", "", ""), 
+                  ("k7/8/8/2pPp3/8/8/8/4K3 w - c6 0 1", "d5c6", "k7/8/2P5/4p3/8/8/8/4K3 b - - 0 1"), 
+                  ("8/8/8/3pP3/8/8/8/k4K2 w - - 0 1", "", ""), 
+                  ("8/8/8/8/3pP3/8/8/k4K2 b - e3 0 1", "d4e3", "8/8/8/8/8/4p3/8/k4K2 w - - 0 2"), 
+                  ("3k4/8/8/8/3pP3/8/8/3R1K2 b - e3 0 1", "", "")]
 
     board = funcs.cb_create_board()
     for test_case in test_cases:
@@ -149,12 +160,15 @@ def test_en_passant():
             check_move_not_in_position(board, test_case[1])
         else:
             check_move_in_position(board, test_case[1])
-            check_move_is_correct(board, test_case[1], test_case[2])
+            move = check_move_is_correct(board, test_case[1], test_case[2])
+            check_undo_move_is_correct(board, move, test_case[0])
     
     # play other move and see if en passant is gone
     set_board(board, "4k3/8/8/3pP3/8/8/8/4K3 w - d6 0 1")
-    check_move_is_correct(board, "e1d1", "4k3/8/8/3pP3/8/8/8/3K4 b - - 1 1")
-    check_move_is_correct(board, "e8f8", "5k2/8/8/3pP3/8/8/8/3K4 w - - 2 2")
+    move_1 = check_move_is_correct(board, "e1d1", "4k3/8/8/3pP3/8/8/8/3K4 b - - 1 1")
+    move_2 = check_move_is_correct(board, "e8f8", "5k2/8/8/3pP3/8/8/8/3K4 w - - 2 2")
+    check_undo_move_is_correct(board, move_2, "4k3/8/8/3pP3/8/8/8/3K4 b - - 1 1")
+    check_undo_move_is_correct(board, move_1, "4k3/8/8/3pP3/8/8/8/4K3 w - d6 0 1")
 
 def test_promotions():
     promotions = ['q', 'r', 'b', 'n']
@@ -169,7 +183,8 @@ def test_promotions():
             promotion_move = test_case[1].replace('*', promotion)
             fen_to_check = test_case[2].replace('*', promotion.upper() if 'w' in test_case[0] else promotion)
             check_move_in_position(board, promotion_move)
-            check_move_is_correct(board, promotion_move, fen_to_check)
+            move = check_move_is_correct(board, promotion_move, fen_to_check)
+            check_undo_move_is_correct(board, move, test_case[0])
 
 def test_pins():
     test_cases = [("4k3/8/8/8/1b6/8/3N4/4K3 w - - 0 1", ["e1d1", "e1e2", "e1f1", "e1f2"], 4),
@@ -192,7 +207,7 @@ def test_pins():
 
 def test_checks():
     test_cases = [("4k3/8/3P4/8/8/8/8/4K3 w - - 0 1", "d6d7", ["e8e7", "e8d8", "e8f8", "e8d7", "e8f7"], 5),
-                  ("4k3/3ppn2/r6q/8/4N3/b7/8/4K3 w - - 0 1", "e4d6", ["a3d6", "a6d6", "e7d6", "f7d6", "h6d6"], 7),
+                  ("4k3/3ppn2/r6q/8/4N3/b7/8/4K3 w - - 0 1", "e4d6", ["a3d6", "a6d6", "e7d6", "f7d6", "h6d6", "e8d8", "e8f8"], 7),
                   ("8/2pk4/8/8/2B5/6P1/8/4K3 w - - 0 1", "c4b5", ["d7d6", "d7d8", "d7e7", "d7c8", "d7e6", "c7c6"], 6),
                   ("8/2p5/8/4k3/8/8/1R6/4K3 w - - 0 1", "b2b5", ["e5d6", "e5d4", "e5e6", "e5e4", "e5f6", "e5f4", "c7c5"], 7),
                   ("8/4k3/8/8/8/8/2Q5/4K3 w - - 0 1", "c2c7", ["e7e6", "e7e8", "e7f6", "e7f8"], 4),
@@ -205,10 +220,11 @@ def test_checks():
     for test_case in test_cases:
         set_board(board, test_case[0])
         check_move_in_position(board, test_case[1])
-        play_move(board, test_case[1])
+        move = play_move(board, test_case[1])
         for move_uci in test_case[2]:
             check_move_in_position(board, move_uci)
         assert funcs.helper_get_move_count(board) == test_case[3], "number of moves on board not equal to what is predicted"
+        check_undo_move_is_correct(board, move, test_case[0])
 
     # make sure king cannot move into check
     set_board(board, "7k/8/2b5/5n1r/8/5rpn/6K1/8 w - - 0 1")
@@ -229,8 +245,9 @@ def test_stalemate():
     for test_case in test_cases:
         set_board(board, test_case[0])
         check_move_in_position(board, test_case[1])
-        play_move(board, test_case[1])
+        move = play_move(board, test_case[1])
         check_game_state(board, test_case[2])
+        check_undo_move_is_correct(board, move, test_case[0])
 
 def test_insufficient_material():
     test_cases = [("7k/8/3p4/1N6/8/8/8/4K3 w - - 0 1", "b5d6", 0),
@@ -249,8 +266,9 @@ def test_insufficient_material():
     for test_case in test_cases:
         set_board(board, test_case[0])
         check_move_in_position(board, test_case[1])
-        play_move(board, test_case[1])
+        move = play_move(board, test_case[1])
         check_game_state(board, test_case[2])
+        check_undo_move_is_correct(board, move, test_case[0])
 
 def test_50_move_rule():
     test_cases = [("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 99 1", "e2e4", 2),
@@ -264,8 +282,9 @@ def test_50_move_rule():
     for test_case in test_cases:
         set_board(board, test_case[0])
         check_move_in_position(board, test_case[1])
-        play_move(board, test_case[1])
+        move = play_move(board, test_case[1])
         check_game_state(board, test_case[2])
+        check_undo_move_is_correct(board, move, test_case[0])
 
 def test_repetition():
     pass
