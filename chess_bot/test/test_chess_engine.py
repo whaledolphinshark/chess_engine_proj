@@ -38,6 +38,8 @@ funcs.helper_get_game_state.argtypes = [ctypes.POINTER(Board)]
 funcs.helper_get_move_count.restype = ctypes.c_int
 funcs.helper_get_move_count.argtypes = [ctypes.POINTER(Board)]
 funcs.helper_get_previous_moves_count.restype = ctypes.c_int
+funcs.helper_get_check_status.restype = ctypes.c_int
+funcs.helper_get_check_status.argtypes = [ctypes.POINTER(Board)]
 funcs.helper_get_previous_moves_count.argtypes = [ctypes.POINTER(Board)]
 funcs.cb_fen_to_board.restype = None
 funcs.cb_fen_to_board.argtypes = [ctypes.POINTER(Board), ctypes.c_char_p]
@@ -228,10 +230,12 @@ def test_checks():
         set_board(board, test_case[0])
         check_move_in_position(board, test_case[1])
         move = play_move(board, test_case[1])
+        assert funcs.helper_get_check_status(board) == 1, f"position: {get_board_fen(board)} not in check"
         for move_uci in test_case[2]:
             check_move_in_position(board, move_uci)
         assert funcs.helper_get_move_count(board) == test_case[3], "number of moves on board not equal to what is predicted"
         check_undo_move_is_correct(board, move, test_case[0])
+        assert funcs.helper_get_check_status(board) == 0, f"position: {test_case[0]} in check"
 
     # make sure king cannot move into check
     set_board(board, "7k/8/2b5/5n1r/8/5rpn/6K1/8 w - - 0 1")
@@ -313,7 +317,7 @@ def test_repetition():
 def test_checkmate():
     # promotion checkmate
     # double? checkmate
-    # some other stuff
+    # checkmate first before 50 move rule
     pass
 
 # test largest fen you can make

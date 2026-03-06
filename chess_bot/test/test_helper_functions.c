@@ -58,3 +58,7 @@ int helper_get_move_count(_board *board){
 int helper_get_previous_moves_count(_board *board){
     return gl_get_length(board->previous_moves);
 }
+
+int helper_get_check_status(_board *board){
+    return board->in_check;
+}
