@@ -37,6 +37,8 @@ funcs.helper_get_game_state.restype = ctypes.c_int
 funcs.helper_get_game_state.argtypes = [ctypes.POINTER(Board)]
 funcs.helper_get_move_count.restype = ctypes.c_int
 funcs.helper_get_move_count.argtypes = [ctypes.POINTER(Board)]
+funcs.helper_get_previous_moves_count.restype = ctypes.c_int
+funcs.helper_get_previous_moves_count.argtypes = [ctypes.POINTER(Board)]
 funcs.cb_fen_to_board.restype = None
 funcs.cb_fen_to_board.argtypes = [ctypes.POINTER(Board), ctypes.c_char_p]
 funcs.cb_board_to_fen.restype = None
@@ -67,6 +69,11 @@ def play_move(board, move_uci):
 def set_board(board, position):
     fen = convert_to_c_string(position, max_fen_length)
     funcs.cb_fen_to_board(board, fen)
+
+def get_board_fen(board):
+    fen_buffer = convert_to_c_string("filler", max_fen_length)
+    funcs.cb_board_to_fen(board, fen_buffer)
+    return fen_buffer.value.decode('utf-8')
 
 def check_move_is_correct(board, move_uci, correct_position):
     fen_buffer = convert_to_c_string("filler", max_fen_length)
@@ -287,7 +294,21 @@ def test_50_move_rule():
         check_undo_move_is_correct(board, move, test_case[0])
 
 def test_repetition():
-    pass
+    test_cases = [("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", ["b1a3", "b8a6", "a3b1", "a6b8"])]
+
+    board = funcs.cb_create_board()
+    for test_case in test_cases:
+        set_board(board, test_case[0])
+        move_history = []
+        for move_uci in test_case[1] + test_case[1]:
+            check_move_in_position(board, move_uci)
+            fen = get_board_fen(board)
+            move = play_move(board, move_uci)
+            move_history.append((move, fen))
+        check_game_state(board, 0)
+        for reverse_move in reversed(move_history):
+            check_undo_move_is_correct(board, reverse_move[0], reverse_move[1])
+        assert funcs.helper_get_previous_moves_count(board) == 0, "board has previous moves when there should be none"
 
 def test_checkmate():
     # promotion checkmate

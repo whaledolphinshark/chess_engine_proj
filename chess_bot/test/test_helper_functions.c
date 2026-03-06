@@ -54,3 +54,7 @@ int helper_get_game_state(_board *board){
 int helper_get_move_count(_board *board){
     return board->move_count;
 }
+
+int helper_get_previous_moves_count(_board *board){
+    return gl_get_length(board->previous_moves);
+}

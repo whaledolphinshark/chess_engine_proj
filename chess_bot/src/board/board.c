@@ -282,7 +282,6 @@ void cb_undo_move(_board *board, _move move){
 
     _move_state prev_move_state = *((_move_state *)gl_access_item(board->previous_moves, prev_moves_count - 1));
     if (mv_moves_equal(move, prev_move_state.move) != 1){
-        printf("%d %d %d, %d %d %d\n", move.to, move.from, move.special_move, prev_move_state.move.to, prev_move_state.move.from, prev_move_state.move.special_move);
         eh_die("cannot undo move that was not played");
     }
 
