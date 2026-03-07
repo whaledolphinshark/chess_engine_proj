@@ -8,7 +8,6 @@ int helper_get_board_move_count(_board *board){
 int helper_find_move(_board *board, char *move_uci){
     _move move_to_check = mv_uci_to_move(move_uci, board);
     for (int i = 0; i < board->move_count; i++){
-        _move move = board->move_pool[i];
         if (mv_moves_equal(board->move_pool[i], move_to_check)){
             return i;
         }
