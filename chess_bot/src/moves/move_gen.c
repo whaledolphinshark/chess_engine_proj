@@ -1,6 +1,7 @@
 #include <stdlib.h>
 
 #include "chess_engine/moves.h"
+#include "chess_engine/board.h"
 #include "moves_internal.h"
 #include "utils/bitboard_util.h"
 
@@ -60,10 +61,10 @@ static int check_castle(_board *board, _color side){
     int code = 0;
     int safe_squares[4];
     if (side == WHITE){
-        safe_squares[0] = mv_is_square_attacked(2, board, board->board, side);
-        safe_squares[1] = mv_is_square_attacked(3, board, board->board, side);
-        safe_squares[2] = mv_is_square_attacked(5, board, board->board, side);
-        safe_squares[3] = mv_is_square_attacked(6, board, board->board, side);
+        safe_squares[0] = cb_is_square_attacked(2, board, board->board, side);
+        safe_squares[1] = cb_is_square_attacked(3, board, board->board, side);
+        safe_squares[2] = cb_is_square_attacked(5, board, board->board, side);
+        safe_squares[3] = cb_is_square_attacked(6, board, board->board, side);
         // left castle
         if ((board->castling_rights & 1UL) != 0 && safe_squares[0] == 0 && safe_squares[1] == 0 && (board->board & 14UL) == 0){
             code++;
@@ -74,10 +75,10 @@ static int check_castle(_board *board, _color side){
         }
     }
     else{
-        safe_squares[0] = mv_is_square_attacked(58, board, board->board, side);
-        safe_squares[1] = mv_is_square_attacked(59, board, board->board, side);
-        safe_squares[2] = mv_is_square_attacked(61, board, board->board, side);
-        safe_squares[3] = mv_is_square_attacked(62, board, board->board, side);
+        safe_squares[0] = cb_is_square_attacked(58, board, board->board, side);
+        safe_squares[1] = cb_is_square_attacked(59, board, board->board, side);
+        safe_squares[2] = cb_is_square_attacked(61, board, board->board, side);
+        safe_squares[3] = cb_is_square_attacked(62, board, board->board, side);
         if ((board->castling_rights & 4UL) != 0 && safe_squares[0] == 0 && safe_squares[1] == 0 && (board->board & 1008806316530991104UL) == 0){
             code++;
         }
@@ -190,82 +191,82 @@ static void get_pin_rays(int king_square, _board *board, _color side, uint64_t p
     }
 }
 
-int mv_is_square_attacked(int square, _board *board, uint64_t occupied, _color side){
-    _piece attackers[6];
-    if (side == WHITE){
-        attackers[0] = B_KING;
-        attackers[1] = B_PAWN;
-        attackers[2] = B_ROOK;
-        attackers[3] = B_KNIGHT;
-        attackers[4] = B_BISHOP;
-        attackers[5] = B_QUEEN;
-    }
-    else{
-        attackers[0] = W_KING;
-        attackers[1] = W_PAWN;
-        attackers[2] = W_ROOK;
-        attackers[3] = W_KNIGHT;
-        attackers[4] = W_BISHOP;
-        attackers[5] = W_QUEEN;
-    }
+// int mv_is_square_attacked(int square, _board *board, uint64_t occupied, _color side){
+//     _piece attackers[6];
+//     if (side == WHITE){
+//         attackers[0] = B_KING;
+//         attackers[1] = B_PAWN;
+//         attackers[2] = B_ROOK;
+//         attackers[3] = B_KNIGHT;
+//         attackers[4] = B_BISHOP;
+//         attackers[5] = B_QUEEN;
+//     }
+//     else{
+//         attackers[0] = W_KING;
+//         attackers[1] = W_PAWN;
+//         attackers[2] = W_ROOK;
+//         attackers[3] = W_KNIGHT;
+//         attackers[4] = W_BISHOP;
+//         attackers[5] = W_QUEEN;
+//     }
 
-    // pawn, knight, king attacks
-    if ((pawn_attacks[side][square] & board->bitboards[attackers[1]]) != 0){
-        return 1;
-    }
-    if ((knight_attacks[square] & board->bitboards[attackers[3]]) != 0){
-        return 1;
-    }
-    if ((king_attacks[square] & board->bitboards[attackers[0]]) != 0){
-        return 1;
-    }
+//     // pawn, knight, king attacks
+//     if ((pawn_attacks[side][square] & board->bitboards[attackers[1]]) != 0){
+//         return 1;
+//     }
+//     if ((knight_attacks[square] & board->bitboards[attackers[3]]) != 0){
+//         return 1;
+//     }
+//     if ((king_attacks[square] & board->bitboards[attackers[0]]) != 0){
+//         return 1;
+//     }
 
-    // rooks, queens
-    // north, east, south, west
-    uint64_t orthogonal_attackers = board->bitboards[attackers[2]] | board->bitboards[attackers[5]];
-    // perhaps this may be better, idk
-    // uint64_t potential_attackers = ((1UL << get_lsb(occupied & rays[square][1])) >> 1) | 
-    //                                 ((1UL << get_lsb(occupied & rays[square][3])) >> 1) |
-    //                                 ((1UL << get_msb(occupied & rays[square][5])) >> 1) |
-    //                                 ((1UL << get_msb(occupied & rays[square][7])) >> 1);
-    uint64_t potential_attacker = (1UL << bb_get_lsb(occupied & rays[square][1])) >> 1;
-    if ((orthogonal_attackers & potential_attacker) != 0){
-        return 1;
-    }
-    potential_attacker = (1UL << bb_get_lsb(occupied & rays[square][3])) >> 1;
-    if ((orthogonal_attackers & potential_attacker) != 0){
-        return 1;
-    }
-    potential_attacker = (1UL << bb_get_msb(occupied & rays[square][5])) >> 1;
-    if ((orthogonal_attackers & potential_attacker) != 0){
-        return 1;
-    }
-    potential_attacker = (1UL << bb_get_msb(occupied & rays[square][7])) >> 1;
-    if ((orthogonal_attackers & potential_attacker) != 0){
-        return 1;
-    }
+//     // rooks, queens
+//     // north, east, south, west
+//     uint64_t orthogonal_attackers = board->bitboards[attackers[2]] | board->bitboards[attackers[5]];
+//     // perhaps this may be better, idk
+//     // uint64_t potential_attackers = ((1UL << get_lsb(occupied & rays[square][1])) >> 1) | 
+//     //                                 ((1UL << get_lsb(occupied & rays[square][3])) >> 1) |
+//     //                                 ((1UL << get_msb(occupied & rays[square][5])) >> 1) |
+//     //                                 ((1UL << get_msb(occupied & rays[square][7])) >> 1);
+//     uint64_t potential_attacker = (1UL << bb_get_lsb(occupied & rays[square][1])) >> 1;
+//     if ((orthogonal_attackers & potential_attacker) != 0){
+//         return 1;
+//     }
+//     potential_attacker = (1UL << bb_get_lsb(occupied & rays[square][3])) >> 1;
+//     if ((orthogonal_attackers & potential_attacker) != 0){
+//         return 1;
+//     }
+//     potential_attacker = (1UL << bb_get_msb(occupied & rays[square][5])) >> 1;
+//     if ((orthogonal_attackers & potential_attacker) != 0){
+//         return 1;
+//     }
+//     potential_attacker = (1UL << bb_get_msb(occupied & rays[square][7])) >> 1;
+//     if ((orthogonal_attackers & potential_attacker) != 0){
+//         return 1;
+//     }
 
-    // bishops, queens
-    uint64_t diagonal_attackers = board->bitboards[attackers[4]] | board->bitboards[attackers[5]];
-    potential_attacker = (1UL << bb_get_lsb(occupied & rays[square][0])) >> 1;
-    if ((diagonal_attackers & potential_attacker) != 0){
-        return 1;
-    }
-    potential_attacker = (1UL << bb_get_lsb(occupied & rays[square][2])) >> 1;
-    if ((diagonal_attackers & potential_attacker) != 0){
-        return 1;
-    }
-    potential_attacker = (1UL << bb_get_msb(occupied & rays[square][4])) >> 1;
-    if ((diagonal_attackers & potential_attacker) != 0){
-        return 1;
-    }
-    potential_attacker = (1UL << bb_get_msb(occupied & rays[square][6])) >> 1;
-    if ((diagonal_attackers & potential_attacker) != 0){
-        return 1;
-    }
+//     // bishops, queens
+//     uint64_t diagonal_attackers = board->bitboards[attackers[4]] | board->bitboards[attackers[5]];
+//     potential_attacker = (1UL << bb_get_lsb(occupied & rays[square][0])) >> 1;
+//     if ((diagonal_attackers & potential_attacker) != 0){
+//         return 1;
+//     }
+//     potential_attacker = (1UL << bb_get_lsb(occupied & rays[square][2])) >> 1;
+//     if ((diagonal_attackers & potential_attacker) != 0){
+//         return 1;
+//     }
+//     potential_attacker = (1UL << bb_get_msb(occupied & rays[square][4])) >> 1;
+//     if ((diagonal_attackers & potential_attacker) != 0){
+//         return 1;
+//     }
+//     potential_attacker = (1UL << bb_get_msb(occupied & rays[square][6])) >> 1;
+//     if ((diagonal_attackers & potential_attacker) != 0){
+//         return 1;
+//     }
 
-    return 0;
-}
+//     return 0;
+// }
 
 void mv_generate_moves(_board *board){
     board->move_count = 0;
@@ -387,7 +388,7 @@ void mv_generate_moves(_board *board){
     uint64_t danger_squares = 0UL;
     while (potential_danger_squares != 0){
         int square = bb_pop_lsb(&potential_danger_squares) - 1;
-        if (mv_is_square_attacked(square, board, occupied, board->turn) == 1){
+        if (cb_is_square_attacked(square, board, occupied, board->turn) == 1){
             danger_squares |= (1UL << square);
             // i can make it quicker i think
         }

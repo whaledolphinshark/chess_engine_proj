@@ -133,7 +133,7 @@ void cb_fen_to_board(_board *board, char *fen){
 
     // check
     int king_square = bb_get_lsb(board->turn == WHITE ? board->bitboards[W_KING] : board->bitboards[B_KING]) - 1;
-    board->in_check = mv_is_square_attacked(king_square, board, board->board, board->turn) == 1;
+    board->in_check = cb_is_square_attacked(king_square, board, board->board, board->turn) == 1;
 
     // moves
     mv_generate_moves(board);
