@@ -390,10 +390,6 @@ void cb_print_board(_board *board){
     printf("\n\n");
 }
 
-int cb_is_in_check(_board *board){
-    return board->in_check;
-}
-
 int cb_is_square_attacked(int square, _board *board, uint64_t occupied, _color side){
     _piece attackers[6];
     if (side == WHITE){

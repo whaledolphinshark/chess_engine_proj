@@ -32,7 +32,7 @@ void print_game_state(_board *board){
                 printf("draw\n");
                 break;
             case ONGOING:
-                if (cb_is_in_check(board)){
+                if (board->in_check == 1){
                     printf("in check\n");
                 }
                 mv_print_moves(board);
