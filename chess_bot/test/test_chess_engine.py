@@ -38,9 +38,9 @@ funcs.helper_get_game_state.argtypes = [ctypes.POINTER(Board)]
 funcs.helper_get_move_count.restype = ctypes.c_int
 funcs.helper_get_move_count.argtypes = [ctypes.POINTER(Board)]
 funcs.helper_get_previous_moves_count.restype = ctypes.c_int
-funcs.helper_get_check_status.restype = ctypes.c_int
-funcs.helper_get_check_status.argtypes = [ctypes.POINTER(Board)]
 funcs.helper_get_previous_moves_count.argtypes = [ctypes.POINTER(Board)]
+funcs.helper_get_zobrist_hash.restype = ctypes.c_uint64
+funcs.helper_get_zobrist_hash.argtypes = [ctypes.POINTER(Board)]
 funcs.cb_fen_to_board.restype = None
 funcs.cb_fen_to_board.argtypes = [ctypes.POINTER(Board), ctypes.c_char_p]
 funcs.cb_board_to_fen.restype = None
@@ -51,6 +51,8 @@ funcs.cb_make_move.restype = None
 funcs.cb_make_move.argtypes = [ctypes.POINTER(Board), Move]
 funcs.cb_undo_move.restype = None
 funcs.cb_undo_move.argtypes = [ctypes.POINTER(Board)]
+funcs.cb_hash_board.restype = ctypes.c_uint64
+funcs.cb_hash_board.argtypes = [ctypes.POINTER(Board)]
 funcs.mv_uci_to_move.restype = Move
 funcs.mv_uci_to_move.argtypes = [ctypes.c_char_p, ctypes.POINTER(Board)]
 funcs.init_chess_engine.restype = None
@@ -110,10 +112,86 @@ def check_game_state(board, expected_game_state):
     funcs.cb_board_to_fen(board, fen_buffer)
     assert funcs.helper_get_game_state(board) == expected_game_state, f"game state of position {fen_buffer.value} != {expected_game_state}"
 
+def check_hash_is_correct(board):
+    correct_hash = funcs.cb_hash_board(board)
+    hash_to_check  = funcs.helper_get_zobrist_hash(board)
+    assert correct_hash == hash_to_check, f"{correct_hash} != {hash_to_check}"
+
+def traverse_positions(board, max_plies):
+    if max_plies == 0:
+        return 1
+    
+    current_ply = 0
+    position_count = 0
+    stack = []
+    for i in range(funcs.helper_get_board_move_count(board)):
+        stack.append((funcs.helper_get_move(board, i), current_ply))
+
+    while len(stack) != 0:
+        move, ply = stack.pop()
+        while ply < current_ply:
+            funcs.cb_undo_move(board)
+            current_ply -= 1
+        funcs.cb_make_move(board, move)
+        current_ply += 1
+        if current_ply < max_plies and funcs.helper_get_game_state(board) == 2:
+            for i in range(funcs.helper_get_board_move_count(board)):
+                stack.append((funcs.helper_get_move(board, i), current_ply))
+        else:
+            position_count += 1
+            current_ply -= 1
+            funcs.cb_undo_move(board)
+        
+    while 0 < current_ply:
+        funcs.cb_undo_move(board)
+        current_ply -= 1
+    
+    return position_count
+
 def test_make_board():
     board = funcs.cb_create_board()
     assert board is not None
     assert isinstance(board, ctypes.POINTER(Board))
+
+# TBD
+# def test_board():
+#     # max_plies = 4
+#     # current_ply = 0
+#     # position_count = 0
+#     # board = funcs.cb_create_board()
+#     # stack = []
+#     # for i in range(funcs.helper_get_board_move_count(board)):
+#     #     stack.append((funcs.helper_get_move(board, i), current_ply))
+
+#     # while len(stack) != 0:
+#     #     move, ply = stack.pop()
+#     #     while ply < current_ply:
+#     #         funcs.cb_undo_move(board)
+#     #         current_ply -= 1
+#     #     funcs.cb_make_move(board, move)
+#     #     current_ply += 1
+#     #     if current_ply < max_plies and funcs.helper_get_game_state(board) == 2:
+#     #         for i in range(funcs.helper_get_board_move_count(board)):
+#     #             stack.append((funcs.helper_get_move(board, i), current_ply))
+#     #     else:
+#     #         position_count += 1
+#     #         current_ply -= 1
+#     #         funcs.cb_undo_move(board)
+        
+#     # while 0 < current_ply:
+#     #     funcs.cb_undo_move(board)
+#     #     current_ply -= 1
+
+#     # expected_positions = 197281
+#     # assert position_count == expected_positions, f"{position_count} != {expected_positions}"
+
+
+#     board = funcs.cb_create_board()
+#     test_cases = [(0, 1), (1, 20), (2, 400), (3, 8902), (4, 197281)]
+#     for plies, expected_positions in test_cases:
+#         print(get_board_fen(board))
+#         position_count = traverse_positions(board, plies)
+#         assert position_count == expected_positions, f"{position_count} != {expected_positions}"
 
 def test_castling():
     castles = ["e1c1", "e1g1", "e8c8", "e8g8"]
@@ -231,12 +309,12 @@ def test_checks():
         set_board(board, test_case[0])
         check_move_in_position(board, test_case[1])
         play_move(board, test_case[1])
-        assert funcs.helper_get_check_status(board) == 1, f"position: {get_board_fen(board)} not in check"
+        assert funcs.helper_is_in_check(board) == 1, f"position: {get_board_fen(board)} not in check"
         for move_uci in test_case[2]:
             check_move_in_position(board, move_uci)
         assert funcs.helper_get_move_count(board) == test_case[3], "number of moves on board not equal to what is predicted"
         check_undo_move_is_correct(board, test_case[0], 0)
-        assert funcs.helper_get_check_status(board) == 0, f"position: {test_case[0]} in check"
+        assert funcs.helper_is_in_check(board) == 0, f"position: {test_case[0]} in check"
 
     # make sure king cannot move into check
     set_board(board, "7k/8/2b5/5n1r/8/5rpn/6K1/8 w - - 0 1")

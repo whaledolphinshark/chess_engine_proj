@@ -1,5 +1,6 @@
 #include "chess_engine/chess_types.h"
 #include "chess_engine/moves.h"
+#include "utils/error_handling.h"
 
 int helper_get_board_move_count(_board *board){
     return board->move_count;
@@ -17,9 +18,8 @@ int helper_find_move(_board *board, char *move_uci){
 }
 
 _move helper_get_move(_board *board, int index){
-    _move move = {0, 0, NONE, NONE, NONE, NORMAL};
     if (index >= board->move_count || index < 0){
-        return move;
+        eh_die("index out of bounds");
     }
     else{
         return board->move_pool[index];
@@ -58,6 +58,6 @@ int helper_get_previous_moves_count(_board *board){
     return gl_get_length(board->previous_moves);
 }
 
-int helper_get_check_status(_board *board){
-    return board->in_check;
+uint64_t helper_get_zobrist_hash(_board *board){
+    return board->zobrist_hash;
 }

@@ -370,7 +370,11 @@ void cb_undo_move(_board *board){
 
     mv_generate_moves(board);
 
-    tt_delete_item(board->history, board->zobrist_hash);
+    int *num = (int *)tt_get_item(board->history, board->zobrist_hash);
+    (*num)--;
+    if (*num == 0){
+        tt_delete_item(board->history, board->zobrist_hash);
+    }
 
     gl_remove_item(board->previous_moves, prev_moves_count - 1);
 }
