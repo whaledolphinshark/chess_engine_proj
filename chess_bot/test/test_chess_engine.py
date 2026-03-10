@@ -121,6 +121,7 @@ def traverse_positions(board, max_plies):
     if max_plies == 0:
         return 1
     
+    check_hash_is_correct(board)
     current_ply = 0
     position_count = 0
     stack = []
@@ -133,6 +134,7 @@ def traverse_positions(board, max_plies):
             funcs.cb_undo_move(board)
             current_ply -= 1
         funcs.cb_make_move(board, move)
+        check_hash_is_correct(board)
         current_ply += 1
         if current_ply < max_plies and funcs.helper_get_game_state(board) == 2:
             for i in range(funcs.helper_get_board_move_count(board)):
@@ -154,44 +156,47 @@ def test_make_board():
     assert isinstance(board, ctypes.POINTER(Board))
 
 # TBD
-# def test_board():
-#     # max_plies = 4
-#     # current_ply = 0
-#     # position_count = 0
-#     # board = funcs.cb_create_board()
-#     # stack = []
-#     # for i in range(funcs.helper_get_board_move_count(board)):
-#     #     stack.append((funcs.helper_get_move(board, i), current_ply))
+def test_board():
+    max_plies = 5
+    current_ply = 0
+    position_count = 0
+    board = funcs.cb_create_board()
+    check_hash_is_correct(board)
+    stack = []
+    for i in range(funcs.helper_get_board_move_count(board)):
+        stack.append((funcs.helper_get_move(board, i), current_ply))
 
-#     # while len(stack) != 0:
-#     #     move, ply = stack.pop()
-#     #     while ply < current_ply:
-#     #         funcs.cb_undo_move(board)
-#     #         current_ply -= 1
-#     #     funcs.cb_make_move(board, move)
-#     #     current_ply += 1
-#     #     if current_ply < max_plies and funcs.helper_get_game_state(board) == 2:
-#     #         for i in range(funcs.helper_get_board_move_count(board)):
-#     #             stack.append((funcs.helper_get_move(board, i), current_ply))
-#     #     else:
-#     #         position_count += 1
-#     #         current_ply -= 1
-#     #         funcs.cb_undo_move(board)
+    while len(stack) != 0:
+        move, ply = stack.pop()
+        while ply < current_ply:
+            funcs.cb_undo_move(board)
+            current_ply -= 1
+        funcs.cb_make_move(board, move)
+        check_hash_is_correct(board)
+        current_ply += 1
+        if current_ply < max_plies and funcs.helper_get_game_state(board) == 2:
+            for i in range(funcs.helper_get_board_move_count(board)):
+                stack.append((funcs.helper_get_move(board, i), current_ply))
+        else:
+            position_count += 1
+            current_ply -= 1
+            funcs.cb_undo_move(board)
         
-#     # while 0 < current_ply:
-#     #     funcs.cb_undo_move(board)
-#     #     current_ply -= 1
+    while 0 < current_ply:
+        funcs.cb_undo_move(board)
+        current_ply -= 1
 
-#     # expected_positions = 197281
-#     # assert position_count == expected_positions, f"{position_count} != {expected_positions}"
+    expected_positions = 4865609
+    assert position_count == expected_positions, f"{position_count} != {expected_positions}"
 
 
-#     board = funcs.cb_create_board()
-#     test_cases = [(0, 1), (1, 20), (2, 400), (3, 8902), (4, 197281)]
-#     for plies, expected_positions in test_cases:
-#         print(get_board_fen(board))
-#         position_count = traverse_positions(board, plies)
-#         assert position_count == expected_positions, f"{position_count} != {expected_positions}"
+    # board = funcs.cb_create_board()
+    # test_cases = [(0, 1), (1, 20), (2, 400), (3, 8902), (4, 197281), (5, 4865609), (6, 119060324)]
+    # for plies, expected_positions in test_cases:
+    #     if plies < 5:
+    #         continue
+    #     position_count = traverse_positions(board, plies)
+    #     assert position_count == expected_positions, f"{position_count} != {expected_positions}"
 
 def test_castling():
     castles = ["e1c1", "e1g1", "e8c8", "e8g8"]

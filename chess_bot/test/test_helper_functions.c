@@ -21,9 +21,8 @@ _move helper_get_move(_board *board, int index){
     if (index >= board->move_count || index < 0){
         eh_die("index out of bounds");
     }
-    else{
-        return board->move_pool[index];
-    }
+
+    return board->move_pool[index];
 }
 
 int helper_are_fens_equal(char *left, char *right){

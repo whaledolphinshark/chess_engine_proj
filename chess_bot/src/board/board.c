@@ -283,6 +283,12 @@ void cb_undo_move(_board *board){
     _move_state prev_move_state = *((_move_state *)gl_access_item(board->previous_moves, prev_moves_count - 1));
     _move move = prev_move_state.move;
 
+    int *num = (int *)tt_get_item(board->history, board->zobrist_hash);
+    (*num)--;
+    if (*num == 0){
+        tt_delete_item(board->history, board->zobrist_hash);
+    }
+
     board->game_state = ONGOING;
     board->plies--;
     board->halfmove_clock = prev_move_state.halfmove_clock;
@@ -369,12 +375,6 @@ void cb_undo_move(_board *board){
     board->in_check = cb_is_square_attacked(bb_get_lsb(potential_king_in_check) - 1, board, board->board, board->turn);
 
     mv_generate_moves(board);
-
-    int *num = (int *)tt_get_item(board->history, board->zobrist_hash);
-    (*num)--;
-    if (*num == 0){
-        tt_delete_item(board->history, board->zobrist_hash);
-    }
 
     gl_remove_item(board->previous_moves, prev_moves_count - 1);
 }

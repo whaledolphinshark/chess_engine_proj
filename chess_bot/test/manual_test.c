@@ -68,7 +68,7 @@ int main(void){
     _board *board = cb_create_board();
 
     // display board
-    cb_fen_to_board(board, SETUP_FEN);
+    cb_fen_to_board(board, START_FEN);
     print_game_state(board);
 
     char input[MAX_MOVE_BUFFER_SIZE];
