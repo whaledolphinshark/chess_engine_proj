@@ -2,10 +2,6 @@
 #include "chess_engine/moves.h"
 #include "utils/error_handling.h"
 
-int helper_get_board_move_count(_board *board){
-    return board->move_count;
-}
-
 int helper_find_move(_board *board, char *move_uci){
     _move move_to_check = mv_uci_to_move(move_uci, board);
     for (int i = 0; i < board->move_count; i++){

@@ -84,10 +84,11 @@ _move mv_uci_to_move(char *move_uci, _board *board){
 
 void mv_move_to_uci(_move move, char *buffer){
     char files[8] = {'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'};
+    char ranks[8] = {'1', '2', '3', '4', '5', '6', '7', '8'};
     buffer[0] = files[move.from % 8];
-    buffer[1] = move.from / 8 + 1;
+    buffer[1] = ranks[move.from / 8];
     buffer[2] = files[move.to % 8];
-    buffer[3] = move.to / 8 + 1;
+    buffer[3] = ranks[move.to / 8];
     switch (move.promotion){
         case W_ROOK:
         case B_ROOK:
