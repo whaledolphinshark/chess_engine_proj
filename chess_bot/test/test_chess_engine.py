@@ -119,7 +119,7 @@ def check_hash_is_correct(board):
 
 def traverse_positions(board, max_plies):
     if max_plies == 0:
-        return 1
+        return 1, 0, 0, 0, 0, 0, 0
     
     check_hash_is_correct(board)
     current_ply = 0
@@ -172,13 +172,10 @@ def test_make_board():
     assert board is not None
     assert isinstance(board, ctypes.POINTER(Board))
 
-# i should probably move this into its own c file and stuff
 def test_board():
     board = funcs.cb_create_board()
-    test_cases = [(0, 1), (1, 20), (2, 400), (3, 8902), (4, 197281), (5, 4865609), (6, 119060324)]
+    test_cases = [(0, 1), (1, 20), (2, 400), (3, 8902), (4, 197281), (5, 4865609)]
     for plies, expected_positions in test_cases:
-        if plies != 4:
-            continue
         position_count, captures, en_passants, castles, promotions, checks, checkmates = traverse_positions(board, plies)
         print(captures, en_passants, castles, promotions, checks, checkmates)
         assert position_count == expected_positions, f"{position_count} != {expected_positions}"

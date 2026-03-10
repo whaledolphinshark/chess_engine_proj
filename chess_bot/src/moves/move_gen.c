@@ -90,36 +90,34 @@ static int check_castle(_board *board, _color side){
     return code;
 }
 
-static uint64_t get_legal_moves_in_check(_board *board, _color side, int king_square, int *num_attackers){
-    _piece attackers[6];
-    uint64_t moves_in_check = 0;
+static uint64_t get_legal_non_king_moves_in_check(_board *board, _color side, int king_square, int *num_attackers){
+    // pawn, knight, kings, 0 = pawns, 1 = knights, 2 = king
+    _piece non_sliders[3];
+    // rooks, bishops, queens, 0 = diagonal, 1 = orthogonal
+    uint64_t sliders[2];
+    uint64_t non_king_moves_in_check = 0;
     *num_attackers = 0;
     if (side == WHITE){
-        attackers[0] = B_KING;
-        attackers[1] = B_PAWN;
-        attackers[2] = B_ROOK;
-        attackers[3] = B_KNIGHT;
-        attackers[4] = B_BISHOP;
-        attackers[5] = B_QUEEN;
+        non_sliders[0] = B_PAWN;
+        non_sliders[1] = B_KNIGHT;
+        non_sliders[2] = B_KING;
+        sliders[0] = board->bitboards[B_BISHOP] | board->bitboards[B_QUEEN];
+        sliders[1] = board->bitboards[B_ROOK] | board->bitboards[B_QUEEN];
     }
     else{
-        attackers[0] = W_KING;
-        attackers[1] = W_PAWN;
-        attackers[2] = W_ROOK;
-        attackers[3] = W_KNIGHT;
-        attackers[4] = W_BISHOP;
-        attackers[5] = W_QUEEN;
+        non_sliders[0] = W_PAWN;
+        non_sliders[1] = W_KNIGHT;
+        non_sliders[2] = W_KING;
+        sliders[0] = board->bitboards[W_BISHOP] | board->bitboards[W_QUEEN];
+        sliders[1] = board->bitboards[W_ROOK] | board->bitboards[W_QUEEN];
     }
 
     // pawn, knight, king attacks
-    moves_in_check |= (pawn_attacks[side][king_square] & board->bitboards[attackers[1]]) | 
-            (knight_attacks[king_square] & board->bitboards[attackers[3]]) | 
-            (king_attacks[king_square] & board->bitboards[attackers[0]]);
-    *num_attackers += bb_get_bits_set(moves_in_check);
+    non_king_moves_in_check |= (pawn_attacks[side][king_square] & board->bitboards[non_sliders[0]]) | 
+            (knight_attacks[king_square] & board->bitboards[non_sliders[1]]) | 
+            (king_attacks[king_square] & board->bitboards[non_sliders[2]]);
+    *num_attackers += bb_get_bits_set(non_king_moves_in_check);
 
-    // rooks, queens
-    // north, east, south, west
-    uint64_t sliders = board->bitboards[attackers[2]] | board->bitboards[attackers[5]] | board->bitboards[attackers[4]];
     for (int i = 0; i < 8; i++){
         uint64_t ray = rays[king_square][i];
         uint64_t occupied = board->board & ray;
@@ -138,13 +136,13 @@ static uint64_t get_legal_moves_in_check(_board *board, _color side, int king_sq
             potential_attack_ray = ray & (UINT64_MAX << potential_attacker_square);
         }
 
-        if ((sliders & (1UL << potential_attacker_square)) != 0){
-            moves_in_check |= potential_attack_ray;
+        if (((1UL << potential_attacker_square) & sliders[i % 2]) != 0){
+            non_king_moves_in_check |= potential_attack_ray;
             (*num_attackers)++;
         }
     }
     
-    return moves_in_check;
+    return non_king_moves_in_check;
 }
 
 static void get_pin_rays(int king_square, _board *board, _color side, uint64_t pin_ray_buffer[64]){
@@ -191,83 +189,6 @@ static void get_pin_rays(int king_square, _board *board, _color side, uint64_t p
     }
 }
 
-// int mv_is_square_attacked(int square, _board *board, uint64_t occupied, _color side){
-//     _piece attackers[6];
-//     if (side == WHITE){
-//         attackers[0] = B_KING;
-//         attackers[1] = B_PAWN;
-//         attackers[2] = B_ROOK;
-//         attackers[3] = B_KNIGHT;
-//         attackers[4] = B_BISHOP;
-//         attackers[5] = B_QUEEN;
-//     }
-//     else{
-//         attackers[0] = W_KING;
-//         attackers[1] = W_PAWN;
-//         attackers[2] = W_ROOK;
-//         attackers[3] = W_KNIGHT;
-//         attackers[4] = W_BISHOP;
-//         attackers[5] = W_QUEEN;
-//     }
-
-//     // pawn, knight, king attacks
-//     if ((pawn_attacks[side][square] & board->bitboards[attackers[1]]) != 0){
-//         return 1;
-//     }
-//     if ((knight_attacks[square] & board->bitboards[attackers[3]]) != 0){
-//         return 1;
-//     }
-//     if ((king_attacks[square] & board->bitboards[attackers[0]]) != 0){
-//         return 1;
-//     }
-
-//     // rooks, queens
-//     // north, east, south, west
-//     uint64_t orthogonal_attackers = board->bitboards[attackers[2]] | board->bitboards[attackers[5]];
-//     // perhaps this may be better, idk
-//     // uint64_t potential_attackers = ((1UL << get_lsb(occupied & rays[square][1])) >> 1) | 
-//     //                                 ((1UL << get_lsb(occupied & rays[square][3])) >> 1) |
-//     //                                 ((1UL << get_msb(occupied & rays[square][5])) >> 1) |
-//     //                                 ((1UL << get_msb(occupied & rays[square][7])) >> 1);
-//     uint64_t potential_attacker = (1UL << bb_get_lsb(occupied & rays[square][1])) >> 1;
-//     if ((orthogonal_attackers & potential_attacker) != 0){
-//         return 1;
-//     }
-//     potential_attacker = (1UL << bb_get_lsb(occupied & rays[square][3])) >> 1;
-//     if ((orthogonal_attackers & potential_attacker) != 0){
-//         return 1;
-//     }
-//     potential_attacker = (1UL << bb_get_msb(occupied & rays[square][5])) >> 1;
-//     if ((orthogonal_attackers & potential_attacker) != 0){
-//         return 1;
-//     }
-//     potential_attacker = (1UL << bb_get_msb(occupied & rays[square][7])) >> 1;
-//     if ((orthogonal_attackers & potential_attacker) != 0){
-//         return 1;
-//     }
-
-//     // bishops, queens
-//     uint64_t diagonal_attackers = board->bitboards[attackers[4]] | board->bitboards[attackers[5]];
-//     potential_attacker = (1UL << bb_get_lsb(occupied & rays[square][0])) >> 1;
-//     if ((diagonal_attackers & potential_attacker) != 0){
-//         return 1;
-//     }
-//     potential_attacker = (1UL << bb_get_lsb(occupied & rays[square][2])) >> 1;
-//     if ((diagonal_attackers & potential_attacker) != 0){
-//         return 1;
-//     }
-//     potential_attacker = (1UL << bb_get_msb(occupied & rays[square][4])) >> 1;
-//     if ((diagonal_attackers & potential_attacker) != 0){
-//         return 1;
-//     }
-//     potential_attacker = (1UL << bb_get_msb(occupied & rays[square][6])) >> 1;
-//     if ((diagonal_attackers & potential_attacker) != 0){
-//         return 1;
-//     }
-
-//     return 0;
-// }
-
 void mv_generate_moves(_board *board){
     board->move_count = 0;
 
@@ -297,17 +218,17 @@ void mv_generate_moves(_board *board){
     get_pin_rays(king_square, board, board->turn, pin_ray_buffer);
 
     // if king in check
-    uint64_t moves_in_check;
+    uint64_t non_king_moves_in_check;
     if (board->in_check == 1){
         int num_checkers;
-        moves_in_check = get_legal_moves_in_check(board, board->turn, king_square, &num_checkers);
+        non_king_moves_in_check = get_legal_non_king_moves_in_check(board, board->turn, king_square, &num_checkers);
         // if there are multiple checkers the only legal moves should be king moves
         if (num_checkers > 1){
-            moves_in_check = 0;
+            non_king_moves_in_check = 0;
         }
     }
     else{
-        moves_in_check = UINT64_MAX;
+        non_king_moves_in_check = UINT64_MAX;
     }
 
     // rook
@@ -315,7 +236,7 @@ void mv_generate_moves(_board *board){
         int square = bb_pop_lsb(&rooks) - 1;
         uint64_t blockers = rook_masks[square] & board->board;
         uint64_t index = (blockers * rook_magics[square]) >> rook_shifts[square];
-        uint64_t moves = rook_attacks[square][index] & ~friendly_pieces & pin_ray_buffer[square] & moves_in_check;
+        uint64_t moves = rook_attacks[square][index] & ~friendly_pieces & pin_ray_buffer[square] & non_king_moves_in_check;
         add_moves_to_buffer(board, square, moves);
     }
 
@@ -324,7 +245,7 @@ void mv_generate_moves(_board *board){
         int square = bb_pop_lsb(&bishops) - 1;
         uint64_t blockers = bishop_masks[square] & board->board;
         uint64_t index = (blockers * bishop_magics[square]) >> bishop_shifts[square];
-        uint64_t moves = bishop_attacks[square][index] & ~friendly_pieces & pin_ray_buffer[square] & moves_in_check;
+        uint64_t moves = bishop_attacks[square][index] & ~friendly_pieces & pin_ray_buffer[square] & non_king_moves_in_check;
         add_moves_to_buffer(board, square, moves);
     }
 
@@ -337,14 +258,14 @@ void mv_generate_moves(_board *board){
         uint64_t orthogonal_blockers = rook_masks[square] & board->board;
         uint64_t orthogonal_index = (orthogonal_blockers * rook_magics[square]) >> rook_shifts[square];
         uint64_t orthogonal_moves = rook_attacks[square][orthogonal_index] & ~friendly_pieces;
-        uint64_t moves = (diagonal_moves | orthogonal_moves) & pin_ray_buffer[square] & moves_in_check;
+        uint64_t moves = (diagonal_moves | orthogonal_moves) & pin_ray_buffer[square] & non_king_moves_in_check;
         add_moves_to_buffer(board, square, moves);
     }
 
     // knight
     while (knights != 0){
         int square = bb_pop_lsb(&knights) - 1;
-        uint64_t moves = knight_attacks[square] & ~friendly_pieces & pin_ray_buffer[square] & moves_in_check;
+        uint64_t moves = knight_attacks[square] & ~friendly_pieces & pin_ray_buffer[square] & non_king_moves_in_check;
         add_moves_to_buffer(board, square, moves);
     }
 
@@ -377,7 +298,7 @@ void mv_generate_moves(_board *board){
             }
         }
 
-        uint64_t moves = (attack_mask | movement_mask) & pin_ray_buffer[square] & moves_in_check;
+        uint64_t moves = (attack_mask | movement_mask) & pin_ray_buffer[square] & non_king_moves_in_check;
         add_pawn_moves_to_buffer(board, square, moves);
     }
 
