@@ -20,6 +20,9 @@ uint64_t king_attacks[64] = {770UL, 1797UL, 3594UL, 7188UL, 14376UL, 28752UL, 57
 uint64_t pawn_moves[2][64];
 uint64_t castle_moves[2][4];
 
+int en_passant_squares[2][8] = {{40, 41, 42, 43, 44, 45, 46, 47}, {16, 17, 18, 19, 20, 21, 22, 23}};
+uint64_t en_passant_pinned_mask[2][8];
+
 // from north clockwise
 uint64_t rays[64][8];
 
@@ -177,6 +180,16 @@ static void init_lookup_tables(){
             right++;
             left--;
         }
+    }
+
+    // en_passant_pinned_mask
+    en_passant_pinned_mask[BLACK][0] = 1UL << 32 << 1;
+    en_passant_pinned_mask[WHITE][0] = 1UL << 24 << 1;
+    en_passant_pinned_mask[BLACK][7] = 128UL << 32 >> 1;
+    en_passant_pinned_mask[WHITE][7] = 128UL << 24 >> 1;
+    for (int i = 1; i < 7; i++){
+        en_passant_pinned_mask[BLACK][i] = 5UL << 32 << (i - 1);
+        en_passant_pinned_mask[WHITE][i] = 5UL << 24 << (i - 1);
     }
 
     // castle moves

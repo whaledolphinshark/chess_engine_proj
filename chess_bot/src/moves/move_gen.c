@@ -149,15 +149,21 @@ static void get_pin_rays(int king_square, _board *board, _color side, uint64_t p
     uint64_t friendly_pieces;
     // 0 = diagonal, 1 = orthogonal
     uint64_t attackers[2];
+    // for use only if needed to check if en passant is not pinned by horizontal slider
+    uint64_t target_pawn_neighbors, friendly_pawns;
     if (side == WHITE){
         friendly_pieces = board->white_pieces;
         attackers[0] = board->bitboards[B_BISHOP] | board->bitboards[B_QUEEN];
         attackers[1] = board->bitboards[B_ROOK] | board->bitboards[B_QUEEN];
+        target_pawn_neighbors = board->board & ~(attackers[1] | board->bitboards[W_KING]) & en_passant_pinned_mask[BLACK][board->en_passant_square % 8];
+        friendly_pawns = board->bitboards[W_PAWN];
     }
     else{
         friendly_pieces = board->black_pieces;
         attackers[0] = board->bitboards[W_BISHOP] | board->bitboards[W_QUEEN];
         attackers[1] = board->bitboards[W_ROOK] | board->bitboards[W_QUEEN];
+        target_pawn_neighbors = board->board & ~(attackers[1] | board->bitboards[B_KING]) & en_passant_pinned_mask[WHITE][board->en_passant_square % 8];
+        friendly_pawns = board->bitboards[B_PAWN];
     }
 
     // if piece not pinned, no pin ray
@@ -185,6 +191,38 @@ static void get_pin_rays(int king_square, _board *board, _color side, uint64_t p
 
         if (((1UL << pinner_square) & attackers[i % 2]) != 0 && ((1UL << pinned_square) & friendly_pieces) != 0){
             pin_ray_buffer[pinned_square] = ray;
+        }
+    }
+
+    // check for special case of en passant being pinned by horizontal slider, example: 8/2p5/3p4/KP5r/1R3pPk/8/4P3/8 b - g3 0 1
+    if (board->en_passant_square != 0 && bb_get_bits_set(target_pawn_neighbors) == 1){
+        int pinned_square = bb_pop_lsb(&target_pawn_neighbors) - 1;
+        // check if that piece is a pawn or not
+        if (((1UL << pinned_square) & friendly_pawns) == 0){
+            return;
+        }
+
+        // detect if king is on the same rank
+        if (pinned_square / 8 == king_square / 8){
+            // from that king fire ray in direction of pinned_square and see if it hits a rook or queen
+            int target_pawn_square = board->en_passant_square + (side == WHITE ? -8 : 8);
+            uint64_t pieces = board->board & ~((1UL << pinned_square) | (1UL << target_pawn_square));
+            int pinner_square;
+            if (king_square % 8 > pinned_square % 8){
+                // west
+                uint64_t occupied = rays[pinned_square][7] & pieces;
+                pinner_square = bb_pop_msb(&occupied) - 1;
+            }
+            else{
+                // east
+                uint64_t occupied = rays[pinned_square][3] & pieces;
+                pinner_square = bb_pop_lsb(&occupied) - 1;
+            }
+
+            if (((1UL << pinner_square) & attackers[1]) != 0){
+                // prevent from taking en passant, but can still move normally otherwise
+                pin_ray_buffer[pinned_square] &= ~(1UL << board->en_passant_square);
+            }
         }
     }
 }

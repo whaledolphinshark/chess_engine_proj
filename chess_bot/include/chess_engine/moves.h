@@ -22,6 +22,10 @@ extern uint64_t king_attacks[64];
 extern uint64_t pawn_moves[2][64];
 extern uint64_t castle_moves[2][4];
 
+extern int en_passant_squares[2][8];
+// used for detection of when a pawn cannot en passant due to being pinned by a rook or queen
+extern uint64_t en_passant_pinned_mask[2][8];
+
 // from northwest clockwise
 extern uint64_t rays[64][8];
 

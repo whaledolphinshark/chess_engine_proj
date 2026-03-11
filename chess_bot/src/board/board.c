@@ -10,8 +10,6 @@
 #include "utils/bitboard_util.h"
 #include "utils/error_handling.h"
 
-int en_passant_squares[2][8] = {{40, 41, 42, 43, 44, 45, 46, 47}, {16, 17, 18, 19, 20, 21, 22, 23}};
-
 void inline cb_calculate_game_state(_board *board){
     // checkmate, stalemate, 50 move rule
     if (board->in_check == 1 && board->move_count == 0){
