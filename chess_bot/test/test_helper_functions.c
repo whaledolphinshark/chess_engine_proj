@@ -56,3 +56,7 @@ int helper_get_previous_moves_count(_board *board){
 uint64_t helper_get_zobrist_hash(_board *board){
     return board->zobrist_hash;
 }
+
+int helper_get_en_passant_square(_board *board){
+    return board->en_passant_square;
+}
