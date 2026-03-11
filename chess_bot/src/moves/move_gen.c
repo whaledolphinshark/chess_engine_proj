@@ -210,12 +210,12 @@ static void get_pin_rays(int king_square, _board *board, _color side, uint64_t p
             int pinner_square;
             if (king_square % 8 > pinned_square % 8){
                 // west
-                uint64_t occupied = rays[pinned_square][7] & pieces;
+                uint64_t occupied = rays[king_square][7] & pieces;
                 pinner_square = bb_pop_msb(&occupied) - 1;
             }
             else{
                 // east
-                uint64_t occupied = rays[pinned_square][3] & pieces;
+                uint64_t occupied = rays[king_square][3] & pieces;
                 pinner_square = bb_pop_lsb(&occupied) - 1;
             }
 
