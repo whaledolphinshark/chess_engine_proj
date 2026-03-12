@@ -90,33 +90,44 @@ static int check_castle(_board *board, _color side){
     return code;
 }
 
-static uint64_t get_legal_non_king_moves_in_check(_board *board, _color side, int king_square, int *num_attackers){
-    // pawn, knight, kings, 0 = pawns, 1 = knights, 2 = king
-    _piece non_sliders[3];
+// gets all legal non king moves in check, 
+// with an exception where a checking pawn can be captured by en passant
+// such a case is detected with en_passant_checker and needs to be handled separately outside the function
+// function assumes there is at least one checking piece
+static uint64_t get_legal_non_king_moves_in_check(_board *board, _color side, int king_square, int *en_passant_checker){
+    // pawns, knights
+    uint64_t pawns;
+    uint64_t knights;
     // rooks, bishops, queens, 0 = diagonal, 1 = orthogonal
     uint64_t sliders[2];
     uint64_t non_king_moves_in_check = 0;
-    *num_attackers = 0;
+    *en_passant_checker = 0;
     if (side == WHITE){
-        non_sliders[0] = B_PAWN;
-        non_sliders[1] = B_KNIGHT;
-        non_sliders[2] = B_KING;
+        pawns = board->bitboards[B_PAWN];
+        knights = board->bitboards[B_KNIGHT];
         sliders[0] = board->bitboards[B_BISHOP] | board->bitboards[B_QUEEN];
         sliders[1] = board->bitboards[B_ROOK] | board->bitboards[B_QUEEN];
     }
     else{
-        non_sliders[0] = W_PAWN;
-        non_sliders[1] = W_KNIGHT;
-        non_sliders[2] = W_KING;
+        pawns = board->bitboards[W_PAWN];
+        knights = board->bitboards[W_KNIGHT];
         sliders[0] = board->bitboards[W_BISHOP] | board->bitboards[W_QUEEN];
         sliders[1] = board->bitboards[W_ROOK] | board->bitboards[W_QUEEN];
     }
 
     // pawn, knight, king attacks
-    non_king_moves_in_check |= (pawn_attacks[side][king_square] & board->bitboards[non_sliders[0]]) | 
-            (knight_attacks[king_square] & board->bitboards[non_sliders[1]]) | 
-            (king_attacks[king_square] & board->bitboards[non_sliders[2]]);
-    *num_attackers += bb_get_bits_set(non_king_moves_in_check);
+    non_king_moves_in_check |= (pawn_attacks[side][king_square] & pawns) | (knight_attacks[king_square] & knights);
+    int num_attackers = bb_get_bits_set(non_king_moves_in_check);
+
+    // if double or more check, only king moves are available
+    if (num_attackers > 1){
+        return 0;
+    }
+
+    // check for special case where a checking pawn can be taken en passant
+    if (board->en_passant_square != 0 && (non_king_moves_in_check & pawns) != 0){
+        *en_passant_checker = 1;
+    }
 
     for (int i = 0; i < 8; i++){
         uint64_t ray = rays[king_square][i];
@@ -138,10 +149,13 @@ static uint64_t get_legal_non_king_moves_in_check(_board *board, _color side, in
 
         if (((1UL << potential_attacker_square) & sliders[i % 2]) != 0){
             non_king_moves_in_check |= potential_attack_ray;
-            (*num_attackers)++;
+            num_attackers += 1;
+            if (num_attackers > 1){
+                return 0;
+            }
         }
     }
-    
+
     return non_king_moves_in_check;
 }
 
@@ -257,17 +271,18 @@ void mv_generate_moves(_board *board){
 
     // if king in check
     uint64_t non_king_moves_in_check;
+    int en_passant_checker = 0;
     if (board->in_check == 1){
-        int num_checkers;
-        non_king_moves_in_check = get_legal_non_king_moves_in_check(board, board->turn, king_square, &num_checkers);
-        // if there are multiple checkers the only legal moves should be king moves
-        if (num_checkers > 1){
-            non_king_moves_in_check = 0;
-        }
+        non_king_moves_in_check = get_legal_non_king_moves_in_check(board, board->turn, king_square, &en_passant_checker);
     }
     else{
         non_king_moves_in_check = UINT64_MAX;
     }
+
+    // if multiple checkers skip to king moves perhaps
+    // if (non_king_moves_in_check == 0){
+
+    // }
 
     // rook
     while (rooks != 0){
@@ -310,6 +325,9 @@ void mv_generate_moves(_board *board){
     // pawn
     uint64_t enemy_pieces = board->board ^ friendly_pieces;
     uint64_t en_passant_mask = board->en_passant_square == 0 ? 0 : 1UL << board->en_passant_square;
+    if (en_passant_checker == 1){
+        non_king_moves_in_check |= (1UL << board->en_passant_square);
+    }
     while (pawns != 0){
         int square = bb_pop_lsb(&pawns) - 1;
         uint64_t forward;
