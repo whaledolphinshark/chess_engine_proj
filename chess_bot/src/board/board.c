@@ -157,62 +157,33 @@ void cb_make_move(_board *board, _move move){
                 board->zobrist_hash ^= en_passant_keys[board->en_passant_square % 8];
             }
         }
-        else if (piece == W_ROOK || piece == B_ROOK){
-            board->zobrist_hash ^= castling_keys[board->castling_rights];
-            switch (move.from){
-                case 0:
-                    board->castling_rights &= ~1UL;
+        if (move.special_move == CASTLE){
+            switch (move.to){
+                case 2:
+                    board->bitboards[W_ROOK] ^= 9UL;
+                    board->piece_array[0] = NONE;
+                    board->piece_array[3] = W_ROOK;
+                    board->zobrist_hash ^= piece_keys[3][W_ROOK] ^ piece_keys[0][W_ROOK];
                     break;
-                case 7:
-                    board->castling_rights &= ~2UL;
+                case 6:
+                    board->bitboards[W_ROOK] ^= 160UL;
+                    board->piece_array[7] = NONE;
+                    board->piece_array[5] = W_ROOK;
+                    board->zobrist_hash ^= piece_keys[5][W_ROOK] ^ piece_keys[7][W_ROOK];
                     break;
-                case 56:
-                    board->castling_rights &= ~4UL;
+                case 58:
+                    board->bitboards[B_ROOK] ^= 648518346341351424UL;
+                    board->piece_array[56] = NONE;
+                    board->piece_array[59] = B_ROOK;
+                    board->zobrist_hash ^= piece_keys[59][B_ROOK] ^ piece_keys[56][B_ROOK];
                     break;
-                case 63:
-                    board->castling_rights &= ~8UL;
+                case 62:
+                    board->bitboards[B_ROOK] ^= 11529215046068469760UL;
+                    board->piece_array[63] = NONE;
+                    board->piece_array[61] = B_ROOK;
+                    board->zobrist_hash ^= piece_keys[61][B_ROOK] ^ piece_keys[63][B_ROOK];
                     break;
             }
-            board->zobrist_hash ^= castling_keys[board->castling_rights];
-        }
-        else if (piece == W_KING || piece == B_KING){
-	        if (move.special_move == CASTLE){
-                switch (move.to){
-                    case 2:
-                        board->bitboards[W_ROOK] ^= 9UL;
-                        board->piece_array[0] = NONE;
-                        board->piece_array[3] = W_ROOK;
-                        board->zobrist_hash ^= piece_keys[3][W_ROOK] ^ piece_keys[0][W_ROOK];
-                        break;
-                    case 6:
-                        board->bitboards[W_ROOK] ^= 160UL;
-                        board->piece_array[7] = NONE;
-                        board->piece_array[5] = W_ROOK;
-                        board->zobrist_hash ^= piece_keys[5][W_ROOK] ^ piece_keys[7][W_ROOK];
-                        break;
-                    case 58:
-                        board->bitboards[B_ROOK] ^= 648518346341351424UL;
-                        board->piece_array[56] = NONE;
-                        board->piece_array[59] = B_ROOK;
-                        board->zobrist_hash ^= piece_keys[59][B_ROOK] ^ piece_keys[56][B_ROOK];
-                        break;
-                    case 62:
-                        board->bitboards[B_ROOK] ^= 11529215046068469760UL;
-                        board->piece_array[63] = NONE;
-                        board->piece_array[61] = B_ROOK;
-                        board->zobrist_hash ^= piece_keys[61][B_ROOK] ^ piece_keys[63][B_ROOK];
-                        break;
-                }
-            }
-
-            board->zobrist_hash ^= castling_keys[board->castling_rights];
-            if (move.from == 4){
-                board->castling_rights &= ~3UL;
-            }
-            else if (move.from == 60){
-                board->castling_rights &= ~12UL;
-            }
-            board->zobrist_hash ^= castling_keys[board->castling_rights];
         }
     }
 
@@ -230,6 +201,38 @@ void cb_make_move(_board *board, _move move){
             board->zobrist_hash ^= piece_keys[move.to][move.capture];
             board->bitboards[move.capture] ^= 1UL << move.to;
         }
+    }
+
+    // check castling rights
+    if ((board->castling_rights & 3UL) != 0){
+        board->zobrist_hash ^= castling_keys[board->castling_rights];
+        if (board->piece_array[4] != W_KING){
+            board->castling_rights &= ~3UL;
+        }
+        else{
+            if(board->piece_array[0] != W_ROOK){
+                board->castling_rights &= ~1UL;
+            }
+            if (board->piece_array[7] != W_ROOK){
+                board->castling_rights &= ~2UL;
+            }
+        }
+        board->zobrist_hash ^= castling_keys[board->castling_rights];
+    }
+    if ((board->castling_rights & 12UL) != 0){
+        board->zobrist_hash ^= castling_keys[board->castling_rights];
+        if (board->piece_array[60] != B_KING){
+            board->castling_rights &= ~12UL;
+        }
+        else{
+            if(board->piece_array[56] != B_ROOK){
+                board->castling_rights &= ~4UL;
+            }
+            if (board->piece_array[63] != B_ROOK){
+                board->castling_rights &= ~8UL;
+            }
+        }
+        board->zobrist_hash ^= castling_keys[board->castling_rights];
     }
 
     board->white_pieces = board->bitboards[W_KING] | board->bitboards[W_PAWN] | board->bitboards[W_ROOK] | board->bitboards[W_BISHOP] | board->bitboards[W_KNIGHT] | board->bitboards[W_QUEEN];

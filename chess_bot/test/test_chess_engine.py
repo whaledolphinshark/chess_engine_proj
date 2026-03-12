@@ -195,10 +195,10 @@ def test_make_board():
 
 def test_board():
     board = funcs.cb_create_board()
-    # test_cases_1 = [(1, 20), (2, 400), (3, 8902), (4, 197281), (5, 4865609), (6, 119060324)]
-    # for plies, expected_positions in test_cases_1:
-    #     position_count = traverse_positions(board, plies)
-    #     assert position_count == expected_positions, f"{position_count} != {expected_positions}"
+    test_cases_1 = [(1, 20), (2, 400), (3, 8902), (4, 197281), (5, 4865609), (6, 119060324)]
+    for plies, expected_positions in test_cases_1:
+        position_count = traverse_positions(board, plies)
+        assert position_count == expected_positions, f"{position_count} != {expected_positions}"
 
     set_board(board, "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1")
     test_cases_2 = [(1, 48), (2, 2039), (3, 97862), (4, 4085603)]
@@ -206,23 +206,23 @@ def test_board():
         position_count = traverse_positions(board, plies, True)
         assert position_count == expected_positions, f"{position_count} != {expected_positions}"
 
-    # set_board(board, "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1")
-    # test_cases_3 = [(1, 14), (2, 191), (3, 2812), (4, 43238), (5, 674624), (6, 11030083)]
-    # for plies, expected_positions in test_cases_3:
-    #     position_count = traverse_positions(board, plies)
-    #     assert position_count == expected_positions, f"{position_count} != {expected_positions}"
+    set_board(board, "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1")
+    test_cases_3 = [(1, 14), (2, 191), (3, 2812), (4, 43238), (5, 674624), (6, 11030083)]
+    for plies, expected_positions in test_cases_3:
+        position_count = traverse_positions(board, plies)
+        assert position_count == expected_positions, f"{position_count} != {expected_positions}"
     
-    # set_board(board, "r2q1rk1/pP1p2pp/Q4n2/bbp1p3/Np6/1B3NBn/pPPP1PPP/R3K2R b KQ - 0 1")
-    # test_cases_4 = [(1, 6), (2, 264), (3, 9467), (4, 422333)]
-    # for plies, expected_positions in test_cases_4:
-    #     position_count = traverse_positions(board, plies, True)
-    #     assert position_count == expected_positions, f"{position_count} != {expected_positions}"
+    set_board(board, "r2q1rk1/pP1p2pp/Q4n2/bbp1p3/Np6/1B3NBn/pPPP1PPP/R3K2R b KQ - 0 1")
+    test_cases_4 = [(1, 6), (2, 264), (3, 9467), (4, 422333)]
+    for plies, expected_positions in test_cases_4:
+        position_count = traverse_positions(board, plies, True)
+        assert position_count == expected_positions, f"{position_count} != {expected_positions}"
 
-    # set_board(board, "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8")
-    # test_cases_5 = [(1, 44), (2, 1486), (3, 62379), (4, 2103487)]
-    # for plies, expected_positions in test_cases_5:
-    #     position_count = traverse_positions(board, plies, True)
-    #     assert position_count == expected_positions, f"{position_count} != {expected_positions}"
+    set_board(board, "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8")
+    test_cases_5 = [(1, 44), (2, 1486), (3, 62379), (4, 2103487)]
+    for plies, expected_positions in test_cases_5:
+        position_count = traverse_positions(board, plies, True)
+        assert position_count == expected_positions, f"{position_count} != {expected_positions}"
 
 def test_castling():
     castles = ["e1c1", "e1g1", "e8c8", "e8g8"]
@@ -256,7 +256,8 @@ def test_castling():
                 ("r3k2r/pp3ppp/1qnbb2n/2P1NQ2/2pPp3/B3P2N/P1P2PPP/R3K2R b KQkq - 0 1", "h8g8", "r3k1r1/pp3ppp/1qnbb2n/2P1NQ2/2pPp3/B3P2N/P1P2PPP/R3K2R w KQq - 1 2"), 
                 ("r3k2r/pp3ppp/1qnbb2n/2P1NQ2/2pPp3/B3P2N/P1P2PPP/R3K2R b KQkq - 0 1", "a8b8", "1r2k2r/pp3ppp/1qnbb2n/2P1NQ2/2pPp3/B3P2N/P1P2PPP/R3K2R w KQk - 1 2"), 
                 ("r3k2r/pp3ppp/1qnbb2n/2P1NQ2/2pPp3/B3P2N/P1P2PPP/R3K2R b Kkq - 0 1", "a8b8", "1r2k2r/pp3ppp/1qnbb2n/2P1NQ2/2pPp3/B3P2N/P1P2PPP/R3K2R w Kk - 1 2"), 
-                ("r3k2r/pp3ppp/1qnbb2n/2P1NQ2/2pPp3/B3P2N/P1P2PPP/R3K2R w KQk - 0 1", "e1c1", "r3k2r/pp3ppp/1qnbb2n/2P1NQ2/2pPp3/B3P2N/P1P2PPP/2KR3R b k - 1 1")]
+                ("r3k2r/pp3ppp/1qnbb2n/2P1NQ2/2pPp3/B3P2N/P1P2PPP/R3K2R w KQk - 0 1", "e1c1", "r3k2r/pp3ppp/1qnbb2n/2P1NQ2/2pPp3/B3P2N/P1P2PPP/2KR3R b k - 1 1"),
+                ("r3k2r/8/8/8/8/4n3/8/R3K2R w KQkq - 0 1", "a1a8", "R3k2r/8/8/8/8/4n3/8/4K2R b Kk - 0 1")]
     for test_case in test_cases_2:
         set_board(board, test_case[0])
         check_move_is_correct(board, test_case[1], test_case[2])

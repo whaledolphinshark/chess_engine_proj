@@ -10,7 +10,7 @@
 #include "utils/bitboard_util.h"
 #include "chess_engine/transposition_table.h"
 
-#define SETUP_FEN "4r3/8/8/8/8/8/8/k6K b - - 0 1"
+#define SETUP_FEN "r3k2r/8/8/8/8/4n3/8/R3K2R w KQkq - 0 1"
 
 void print_game_state(_board *board){
     char fen[MAX_FEN_LENGTH];
