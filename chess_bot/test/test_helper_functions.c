@@ -1,5 +1,6 @@
 #include "chess_engine/chess_types.h"
 #include "chess_engine/moves.h"
+#include "chess_engine/board.h"
 #include "utils/error_handling.h"
 
 int helper_find_move(_board *board, char *move_uci){
@@ -55,8 +56,4 @@ int helper_get_previous_moves_count(_board *board){
 
 uint64_t helper_get_zobrist_hash(_board *board){
     return board->zobrist_hash;
-}
-
-int helper_get_en_passant_square(_board *board){
-    return board->en_passant_square;
 }

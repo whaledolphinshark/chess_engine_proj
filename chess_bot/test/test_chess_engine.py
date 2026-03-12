@@ -41,8 +41,6 @@ funcs.helper_get_previous_moves_count.restype = ctypes.c_int
 funcs.helper_get_previous_moves_count.argtypes = [ctypes.POINTER(Board)]
 funcs.helper_get_zobrist_hash.restype = ctypes.c_uint64
 funcs.helper_get_zobrist_hash.argtypes = [ctypes.POINTER(Board)]
-funcs.helper_get_en_passant_square.restype = ctypes.c_int
-funcs.helper_get_en_passant_square.artypes = [ctypes.POINTER(Board)]
 funcs.cb_fen_to_board.restype = None
 funcs.cb_fen_to_board.argtypes = [ctypes.POINTER(Board), ctypes.c_char_p]
 funcs.cb_board_to_fen.restype = None
@@ -126,28 +124,37 @@ def check_hash_is_correct(board):
     hash_to_check  = funcs.helper_get_zobrist_hash(board)
     assert correct_hash == hash_to_check, f"{correct_hash} != {hash_to_check}"
 
+def update_stats(board, captures=0, en_passants=0, castles=0, promotions=0, checks=0, checkmates=0):
+    for i in range(funcs.helper_get_move_count(board)):
+        move = funcs.helper_get_move(board, i)
+        if move.capture != 12:
+            captures += 1
+        match (move.special_move):
+            case 1:
+                en_passants += 1
+            case 2:
+                castles += 1
+            case 3:
+                promotions += 1
+        funcs.cb_make_move(board, move)
+        if funcs.helper_is_in_check(board) == 1:
+            checks += 1
+        if funcs.helper_get_game_state(board) == 1 or funcs.helper_get_game_state(board) == -1:
+            checkmates += 1
+        funcs.cb_undo_move(board)
+    return captures, en_passants, castles, promotions, checks, checkmates
+
 def traverse_positions(board, max_plies, track_stats = False):
     if max_plies == 1:
         if track_stats:
-            captures = en_passants = castles = promotions = 0
-            for i in range(funcs.helper_get_move_count(board)):
-                move = funcs.helper_get_move(board, i)
-                if move.capture != 12:
-                    captures += 1
-                match (move.special_move):
-                    case 1:
-                        en_passants += 1
-                    case 2:
-                        castles += 1
-                    case 3:
-                        promotions += 1
-            print(funcs.helper_get_move_count(board), captures, en_passants, castles, promotions)
+            captures, en_passants, castles, promotions, checks, checkmates = update_stats(board)
+            print(funcs.helper_get_move_count(board), captures, en_passants, castles, promotions, checks, checkmates)
         return funcs.helper_get_move_count(board)
     
     check_hash_is_correct(board)
     current_ply = 0
     position_count = 0
-    captures = en_passants = castles = promotions = 0
+    captures = en_passants = castles = promotions = checks = checkmates = 0
     stack = []
     for i in range(funcs.helper_get_move_count(board)):
         stack.append((funcs.helper_get_move(board, i), current_ply))
@@ -164,17 +171,7 @@ def traverse_positions(board, max_plies, track_stats = False):
         if current_ply == max_plies - 1 and funcs.helper_get_game_state(board) == 2:
             position_count += funcs.helper_get_move_count(board)
             if track_stats:
-                for i in range(funcs.helper_get_move_count(board)):
-                    move = funcs.helper_get_move(board, i)
-                    if move.capture != 12:
-                        captures += 1
-                    match (move.special_move):
-                        case 1:
-                            en_passants += 1
-                        case 2:
-                            castles += 1
-                        case 3:
-                            promotions += 1
+                captures, en_passants, castles, promotions, checks, checkmates = update_stats(board, captures, en_passants, castles, promotions, checks, checkmates)
         elif funcs.helper_get_game_state(board) != 2:
             current_ply -= 1
             funcs.cb_undo_move(board)
@@ -187,7 +184,7 @@ def traverse_positions(board, max_plies, track_stats = False):
         current_ply -= 1
 
     if track_stats:
-        print(position_count, captures, en_passants, castles, promotions)
+        print(position_count, captures, en_passants, castles, promotions, checks, checkmates)
     
     return position_count
 
@@ -203,17 +200,17 @@ def test_board():
     #     position_count = traverse_positions(board, plies)
     #     assert position_count == expected_positions, f"{position_count} != {expected_positions}"
 
-    # set_board(board, "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1")
-    # test_cases_2 = [(1, 48), (2, 2039), (3, 97862), (4, 4085603)]
-    # for plies, expected_positions in test_cases_2:
-    #     position_count = traverse_positions(board, plies, True)
-    #     assert position_count == expected_positions, f"{position_count} != {expected_positions}"
-
-    set_board(board, "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1")
-    test_cases_3 = [(1, 14), (2, 191), (3, 2812), (4, 43238), (5, 674624), (6, 11030083)]
-    for plies, expected_positions in test_cases_3:
+    set_board(board, "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1")
+    test_cases_2 = [(1, 48), (2, 2039), (3, 97862), (4, 4085603)]
+    for plies, expected_positions in test_cases_2:
         position_count = traverse_positions(board, plies, True)
         assert position_count == expected_positions, f"{position_count} != {expected_positions}"
+
+    # set_board(board, "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1")
+    # test_cases_3 = [(1, 14), (2, 191), (3, 2812), (4, 43238), (5, 674624), (6, 11030083)]
+    # for plies, expected_positions in test_cases_3:
+    #     position_count = traverse_positions(board, plies)
+    #     assert position_count == expected_positions, f"{position_count} != {expected_positions}"
     
     # set_board(board, "r2q1rk1/pP1p2pp/Q4n2/bbp1p3/Np6/1B3NBn/pPPP1PPP/R3K2R b KQ - 0 1")
     # test_cases_4 = [(1, 6), (2, 264), (3, 9467), (4, 422333)]
@@ -341,7 +338,9 @@ def test_checks():
                   ("8/P7/8/8/8/8/8/k6K w - - 0 1", "a7a8q", ["a1b2", "a1b1"], 2),
                   ("8/P1k5/8/8/8/8/7P/6K1 w - - 0 1","a7a8n", ["c7b7", "c7b8", "c7c8", "c7d8", "c7d7", "c7d6", "c7c6"], 7),
                   ("7k/1Q6/8/6K1/8/8/8/8 w - - 0 1", "b7g7", ["h8g7"], 1),
-                  ("4k3/8/8/2R1Bb2/8/8/K7/8 w - - 0 1", "c5c8", ["e8e7", "e8d7", "e8f7", "f5c8"], 4)]
+                  ("4k3/8/8/2R1Bb2/8/8/K7/8 w - - 0 1", "c5c8", ["e8e7", "e8d7", "e8f7", "f5c8"], 4),
+                  ("8/2p5/7R/1P6/1K6/8/8/5k2 b - - 0 1", "c7c5", ["b5c6", "b4c5", "b4a5", "b4a4", "b4c4", "b4b3", "b4a3", "b4c3"], 8),
+                  ("1r6/2p5/7R/1P6/1K6/8/8/5k2 b - - 0 1", "c7c5", ["b4c5", "b4a5", "b4a4", "b4c4", "b4b3", "b4a3", "b4c3"], 7)]
     board = funcs.cb_create_board()
     for test_case in test_cases:
         set_board(board, test_case[0])
