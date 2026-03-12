@@ -389,7 +389,6 @@ void cb_print_board(_board *board){
 }
 
 int cb_is_square_attacked(int square, _board *board, uint64_t occupied, _color side){
-    // _piece attackers[6];
     // 0 = pawns, 1 = knights, 3 = king
     uint64_t non_sliders[3];
     // 0 = diagonal, 1 = orthogonal
@@ -400,12 +399,6 @@ int cb_is_square_attacked(int square, _board *board, uint64_t occupied, _color s
         non_sliders[2] = board->bitboards[B_KING];
         sliders[0] = board->bitboards[B_BISHOP] | board->bitboards[B_QUEEN];
         sliders[1] = board->bitboards[B_ROOK] | board->bitboards[B_QUEEN];
-        // attackers[0] = B_KING;
-        // attackers[1] = B_PAWN;
-        // attackers[2] = B_ROOK;
-        // attackers[3] = B_KNIGHT;
-        // attackers[4] = B_BISHOP;
-        // attackers[5] = B_QUEEN;
     }
     else{
         non_sliders[0] = board->bitboards[W_PAWN];
@@ -413,12 +406,6 @@ int cb_is_square_attacked(int square, _board *board, uint64_t occupied, _color s
         non_sliders[2] = board->bitboards[W_KING];
         sliders[0] = board->bitboards[W_BISHOP] | board->bitboards[W_QUEEN];
         sliders[1] = board->bitboards[W_ROOK] | board->bitboards[W_QUEEN];
-        // attackers[0] = W_KING;
-        // attackers[1] = W_PAWN;
-        // attackers[2] = W_ROOK;
-        // attackers[3] = W_KNIGHT;
-        // attackers[4] = W_BISHOP;
-        // attackers[5] = W_QUEEN;
     }
 
     // pawn, knight, king attacks
@@ -451,49 +438,6 @@ int cb_is_square_attacked(int square, _board *board, uint64_t occupied, _color s
             return 1;
         }
     }
-    // // rooks, queens
-    // // north, east, south, west
-    // uint64_t orthogonal_attackers = board->bitboards[attackers[2]] | board->bitboards[attackers[5]];
-    // // perhaps this may be better, idk
-    // // uint64_t potential_attackers = ((1UL << get_lsb(occupied & rays[square][1])) >> 1) | 
-    // //                                 ((1UL << get_lsb(occupied & rays[square][3])) >> 1) |
-    // //                                 ((1UL << get_msb(occupied & rays[square][5])) >> 1) |
-    // //                                 ((1UL << get_msb(occupied & rays[square][7])) >> 1);
-    // uint64_t potential_attacker = (1UL << bb_get_lsb(occupied & rays[square][1])) >> 1;
-    // if ((orthogonal_attackers & potential_attacker) != 0){
-    //     return 1;
-    // }
-    // potential_attacker = (1UL << bb_get_lsb(occupied & rays[square][3])) >> 1;
-    // if ((orthogonal_attackers & potential_attacker) != 0){
-    //     return 1;
-    // }
-    // potential_attacker = (1UL << bb_get_msb(occupied & rays[square][5])) >> 1;
-    // if ((orthogonal_attackers & potential_attacker) != 0){
-    //     return 1;
-    // }
-    // potential_attacker = (1UL << bb_get_msb(occupied & rays[square][7])) >> 1;
-    // if ((orthogonal_attackers & potential_attacker) != 0){
-    //     return 1;
-    // }
-
-    // // bishops, queens
-    // uint64_t diagonal_attackers = board->bitboards[attackers[4]] | board->bitboards[attackers[5]];
-    // potential_attacker = (1UL << bb_get_lsb(occupied & rays[square][0])) >> 1;
-    // if ((diagonal_attackers & potential_attacker) != 0){
-    //     return 1;
-    // }
-    // potential_attacker = (1UL << bb_get_lsb(occupied & rays[square][2])) >> 1;
-    // if ((diagonal_attackers & potential_attacker) != 0){
-    //     return 1;
-    // }
-    // potential_attacker = (1UL << bb_get_msb(occupied & rays[square][4])) >> 1;
-    // if ((diagonal_attackers & potential_attacker) != 0){
-    //     return 1;
-    // }
-    // potential_attacker = (1UL << bb_get_msb(occupied & rays[square][6])) >> 1;
-    // if ((diagonal_attackers & potential_attacker) != 0){
-    //     return 1;
-    // }
 
     return 0;
 }
@@ -528,5 +472,6 @@ void cb_destroy_board(_board *board){
         eh_die("passed in null pointer");
     }
     tt_destroy_transposition_table(board->history);
+    gl_destroy_list(board->previous_moves);
     free(board);
 }
