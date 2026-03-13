@@ -53,7 +53,13 @@ void undo_move_on_board(_board *board, int num_moves){
 
 void make_move_on_board(_board *board, char *input){
     _move move = mv_uci_to_move(input, board);
-    if (board->game_state == ONGOING){
+    int valid = 0;
+    for (int i = 0; i < board->move_count; i++){
+        if (mv_moves_equal(board->move_pool[i], move)){
+            valid = 1;
+        }
+    }
+    if (board->game_state == ONGOING && valid == 1){
         cb_make_move(board, move);
         print_game_state(board);
     }
@@ -68,7 +74,7 @@ int main(void){
     _board *board = cb_create_board();
 
     // display board
-    cb_fen_to_board(board, SETUP_FEN);
+    cb_fen_to_board(board, START_FEN);
     print_game_state(board);
 
     char input[MAX_MOVE_BUFFER_SIZE];

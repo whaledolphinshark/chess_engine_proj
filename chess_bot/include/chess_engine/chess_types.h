@@ -59,6 +59,8 @@ typedef struct _move_state{
     uint8_t castling_rights;
     int halfmove_clock;
     int en_passant_square;
+    int in_check;
+    uint64_t zobrish_hash;
 }_move_state;
 
 typedef struct _board{

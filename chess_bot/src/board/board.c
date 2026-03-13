@@ -124,7 +124,7 @@ void cb_make_move(_board *board, _move move){
         eh_die("game has ended");
     }
 
-    _move_state move_state = {move, board->castling_rights, board->halfmove_clock, board->en_passant_square};
+    _move_state move_state = {move, board->castling_rights, board->halfmove_clock, board->en_passant_square, board->in_check, board->zobrist_hash};
     if (board->en_passant_square != 0){
         board->zobrist_hash ^= en_passant_keys[board->en_passant_square % 8];
     }
@@ -290,9 +290,13 @@ void cb_undo_move(_board *board){
         tt_delete_item(board->history, board->zobrist_hash);
     }
 
+    board->zobrist_hash = prev_move_state.zobrish_hash;
+    board->in_check = prev_move_state.in_check;
     board->game_state = ONGOING;
     board->plies--;
     board->halfmove_clock = prev_move_state.halfmove_clock;
+    board->castling_rights = prev_move_state.castling_rights;
+    board->en_passant_square = prev_move_state.en_passant_square;
     if (board->turn == WHITE){
         board->fullmove_clock--;
         board->turn = BLACK;
@@ -301,28 +305,16 @@ void cb_undo_move(_board *board){
         board->turn = WHITE;
     }
 
-    board->zobrist_hash ^= black_turn_key ^ castling_keys[board->castling_rights] ^ castling_keys[prev_move_state.castling_rights];
-    board->castling_rights = prev_move_state.castling_rights;
-    if (board->en_passant_square != 0){
-        board->zobrist_hash ^= en_passant_keys[board->en_passant_square % 8];
-    }
-    if (prev_move_state.en_passant_square != 0){
-        board->zobrist_hash ^= en_passant_keys[prev_move_state.en_passant_square % 8];
-    }
-    board->en_passant_square = prev_move_state.en_passant_square;
-
     if (move.special_move == PROMOTION){
         board->bitboards[move.promotion] ^= 1UL << move.to;
         board->bitboards[move.piece] ^= 1UL << move.from;
         board->piece_array[move.to] = NONE;
         board->piece_array[move.from] = move.piece;
-        board->zobrist_hash ^= piece_keys[move.to][move.promotion] ^ piece_keys[move.from][move.piece];
     }
     else{
         board->bitboards[move.piece] ^= (1UL << move.from) | (1UL << move.to);
         board->piece_array[move.to] = NONE;
         board->piece_array[move.from] = move.piece;
-        board->zobrist_hash ^= piece_keys[move.to][move.piece] ^ piece_keys[move.from][move.piece];
         
         if (move.special_move == CASTLE){
             switch (move.to){
@@ -330,25 +322,21 @@ void cb_undo_move(_board *board){
                     board->bitboards[W_ROOK] ^= 9UL;
                     board->piece_array[0] = W_ROOK;
                     board->piece_array[3] = NONE;
-                    board->zobrist_hash ^= piece_keys[3][W_ROOK] ^ piece_keys[0][W_ROOK];
                     break;
                 case 6:
                     board->bitboards[W_ROOK] ^= 160UL;
                     board->piece_array[7] = W_ROOK;
                     board->piece_array[5] = NONE;
-                    board->zobrist_hash ^= piece_keys[5][W_ROOK] ^ piece_keys[7][W_ROOK];
                     break;
                 case 58:
                     board->bitboards[B_ROOK] ^= 648518346341351424UL;
                     board->piece_array[56] = B_ROOK;
                     board->piece_array[59] = NONE;
-                    board->zobrist_hash ^= piece_keys[59][B_ROOK] ^ piece_keys[56][B_ROOK];
                     break;
                 case 62:
                     board->bitboards[B_ROOK] ^= 11529215046068469760UL;
                     board->piece_array[63] = B_ROOK;
                     board->piece_array[61] = NONE;
-                    board->zobrist_hash ^= piece_keys[61][B_ROOK] ^ piece_keys[63][B_ROOK];
                     break;
             }
         }
@@ -357,12 +345,10 @@ void cb_undo_move(_board *board){
     if (move.capture != NONE){
         if (move.special_move == EN_PASSANT){
             int captured_pawn_square = move.to + (board->turn == WHITE ? -8 : 8);
-            board->zobrist_hash ^= piece_keys[captured_pawn_square][move.capture];
             board->bitboards[move.capture] ^= 1UL << captured_pawn_square;
             board->piece_array[captured_pawn_square] = move.capture;
         }
         else{
-            board->zobrist_hash ^= piece_keys[move.to][move.capture];
             board->bitboards[move.capture] ^= 1UL << move.to;
             board->piece_array[move.to] = move.capture;
         }
@@ -371,9 +357,6 @@ void cb_undo_move(_board *board){
     board->white_pieces = board->bitboards[W_KING] | board->bitboards[W_PAWN] | board->bitboards[W_ROOK] | board->bitboards[W_BISHOP] | board->bitboards[W_KNIGHT] | board->bitboards[W_QUEEN];
     board->black_pieces = board->bitboards[B_KING] | board->bitboards[B_PAWN] | board->bitboards[B_ROOK] | board->bitboards[B_BISHOP] | board->bitboards[B_KNIGHT] | board->bitboards[B_QUEEN];
     board->board = board->white_pieces | board->black_pieces;
-
-    uint64_t potential_king_in_check = board->bitboards[board->turn == WHITE ? W_KING : B_KING];
-    board->in_check = cb_is_square_attacked(bb_get_lsb(potential_king_in_check) - 1, board, board->board, board->turn);
 
     mv_generate_moves(board);
 

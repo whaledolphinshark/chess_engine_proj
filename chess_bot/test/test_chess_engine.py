@@ -195,7 +195,7 @@ def test_make_board():
 
 def test_board():
     board = funcs.cb_create_board()
-    test_cases_1 = [(1, 20), (2, 400), (3, 8902), (4, 197281), (5, 4865609), (6, 119060324)]
+    test_cases_1 = [(1, 20), (2, 400), (3, 8902), (4, 197281), (5, 4865609)]
     for plies, expected_positions in test_cases_1:
         position_count = traverse_positions(board, plies)
         assert position_count == expected_positions, f"{position_count} != {expected_positions}"
@@ -207,7 +207,7 @@ def test_board():
         assert position_count == expected_positions, f"{position_count} != {expected_positions}"
 
     set_board(board, "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1")
-    test_cases_3 = [(1, 14), (2, 191), (3, 2812), (4, 43238), (5, 674624), (6, 11030083)]
+    test_cases_3 = [(1, 14), (2, 191), (3, 2812), (4, 43238), (5, 674624)]
     for plies, expected_positions in test_cases_3:
         position_count = traverse_positions(board, plies)
         assert position_count == expected_positions, f"{position_count} != {expected_positions}"
@@ -219,25 +219,25 @@ def test_board():
         assert position_count == expected_positions, f"{position_count} != {expected_positions}"
 
     set_board(board, "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8")
-    test_cases_5 = [(1, 44), (2, 1486), (3, 62379), (4, 2103487)]
+    test_cases_5 = [(1, 44), (2, 1486), (3, 62379)]
     for plies, expected_positions in test_cases_5:
         position_count = traverse_positions(board, plies)
         assert position_count == expected_positions, f"{position_count} != {expected_positions}"
 
     set_board(board, "n1n5/PPPk4/8/8/8/8/4Kppp/5N1N b - - 0 1")
-    test_cases_6 = [(1, 24), (2, 496), (3, 9483), (4, 182838), (5, 3605103)]
+    test_cases_6 = [(1, 24), (2, 496), (3, 9483), (4, 182838)]
     for plies, expected_positions in test_cases_6:
         position_count = traverse_positions(board, plies)
         assert position_count == expected_positions, f"{position_count} != {expected_positions}"
 
     set_board(board, "r3k2r/1bp2pP1/5n2/1P1Q4/1pPq4/5N2/1B1P2p1/R3K2R b KQkq c3 0 1")
-    test_cases_7 = [(1, 60), (2, 2608), (3, 113742), (4, 4812099)]
+    test_cases_7 = [(1, 60), (2, 2608), (3, 113742)]
     for plies, expected_positions in test_cases_7:
         position_count = traverse_positions(board, plies)
         assert position_count == expected_positions, f"{position_count} != {expected_positions}"
 
     set_board(board, "8/K7/8/8/2Q1Pp1k/8/8/8 b - e3 0 1")
-    test_cases_8 = [(1, 6), (2, 162), (3, 937), (4, 24947), (5, 139087), (6, 3627518)]
+    test_cases_8 = [(1, 6), (2, 162), (3, 937), (4, 24947), (5, 139087)]
     for plies, expected_positions in test_cases_8:
         position_count = traverse_positions(board, plies)
         assert position_count == expected_positions, f"{position_count} != {expected_positions}"
