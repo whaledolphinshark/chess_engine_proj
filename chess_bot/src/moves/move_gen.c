@@ -276,19 +276,36 @@ void mv_generate_moves(_board *board){
     get_pin_rays(king_square, board, board->turn, pin_ray_buffer);
 
     // if king in check
+    uint64_t castle_mask;
     uint64_t non_king_moves_in_check;
     int en_passant_checker = 0;
     if (board->in_check == 1){
         non_king_moves_in_check = get_legal_non_king_moves_in_check(board, board->turn, king_square, &en_passant_checker);
+        castle_mask = 0;
     }
     else{
         non_king_moves_in_check = UINT64_MAX;
+        castle_mask = castle_moves[board->turn][check_castle(board, board->turn)];
     }
 
-    // if multiple checkers skip to king moves perhaps
-    // if (non_king_moves_in_check == 0){
+    // king
+    // get danger squares
+    uint64_t potential_danger_squares = king_attacks[king_square] & ~friendly_pieces;
+    uint64_t occupied = board->board ^ (1UL << king_square);
+    uint64_t danger_squares = 0UL;
+    while (potential_danger_squares != 0){
+        int square = bb_pop_lsb(&potential_danger_squares) - 1;
+        if (cb_is_square_attacked(square, board, occupied, board->turn) == 1){
+            danger_squares |= (1UL << square);
+            // i can make it quicker i think
+        }
+    }
 
-    // }
+    uint64_t king_moves = (king_attacks[king_square] & ~friendly_pieces & ~danger_squares) | castle_mask;
+    add_moves_to_buffer(board, king_square, king_moves);
+    if (non_king_moves_in_check == 0){
+        return;
+    }
 
     // rook
     while (rooks != 0){
@@ -336,48 +353,10 @@ void mv_generate_moves(_board *board){
     }
     while (pawns != 0){
         int square = bb_pop_lsb(&pawns) - 1;
-        uint64_t forward;
-        uint64_t jump;
-        if (board->turn == WHITE){
-            forward = 1UL << square << 8;
-            jump = forward << 8;
-        }
-        else{
-            forward = 1UL << square >> 8;
-            jump = forward >> 8;
-        }
-
+        uint64_t forward = board->turn == WHITE ? 1UL << (square + 8) : 1UL << (square - 8);
         uint64_t attack_mask = pawn_attacks[board->turn][square] & ~friendly_pieces & (enemy_pieces | en_passant_mask);
-        uint64_t movement_mask;
-        if ((forward & board->board) != 0){
-            movement_mask = 0;
-        }
-        else{
-            movement_mask = pawn_moves[board->turn][square];
-            // check pawn jump if applicable
-            if ((jump & movement_mask) != 0 && (jump & board->board) != 0){
-                movement_mask &= ~jump;
-            }
-        }
-
+        uint64_t movement_mask = (board->board & forward) != 0 ? 0 : pawn_moves[board->turn][square] & ~board->board;
         uint64_t moves = (attack_mask | movement_mask) & pin_ray_buffer[square] & non_king_moves_in_check;
         add_pawn_moves_to_buffer(board, square, moves);
     }
-
-    // king
-    // get danger squares
-    uint64_t potential_danger_squares = king_attacks[king_square] & ~friendly_pieces;
-    uint64_t occupied = board->board ^ (1UL << king_square);
-    uint64_t danger_squares = 0UL;
-    while (potential_danger_squares != 0){
-        int square = bb_pop_lsb(&potential_danger_squares) - 1;
-        if (cb_is_square_attacked(square, board, occupied, board->turn) == 1){
-            danger_squares |= (1UL << square);
-            // i can make it quicker i think
-        }
-    }
-    // check castles
-    uint64_t castle_mask = castle_moves[board->turn][check_castle(board, board->turn)];
-    uint64_t moves = (king_attacks[king_square] & ~friendly_pieces & ~danger_squares) | castle_mask;
-    add_moves_to_buffer(board, king_square, moves);
 }
