@@ -227,7 +227,19 @@ def test_board():
     set_board(board, "n1n5/PPPk4/8/8/8/8/4Kppp/5N1N b - - 0 1")
     test_cases_6 = [(1, 24), (2, 496), (3, 9483), (4, 182838), (5, 3605103)]
     for plies, expected_positions in test_cases_6:
-        position_count = traverse_positions(board, plies, True)
+        position_count = traverse_positions(board, plies)
+        assert position_count == expected_positions, f"{position_count} != {expected_positions}"
+
+    set_board(board, "r3k2r/1bp2pP1/5n2/1P1Q4/1pPq4/5N2/1B1P2p1/R3K2R b KQkq c3 0 1")
+    test_cases_7 = [(1, 60), (2, 2608), (3, 113742), (4, 4812099)]
+    for plies, expected_positions in test_cases_7:
+        position_count = traverse_positions(board, plies)
+        assert position_count == expected_positions, f"{position_count} != {expected_positions}"
+
+    set_board(board, "8/K7/8/8/2Q1Pp1k/8/8/8 b - e3 0 1")
+    test_cases_8 = [(1, 6), (2, 162), (3, 937), (4, 24947), (5, 139087), (6, 3627518)]
+    for plies, expected_positions in test_cases_8:
+        position_count = traverse_positions(board, plies)
         assert position_count == expected_positions, f"{position_count} != {expected_positions}"
 
 def test_castling():
