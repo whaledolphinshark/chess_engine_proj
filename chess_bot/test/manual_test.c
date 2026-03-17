@@ -70,7 +70,6 @@ void make_move_on_board(_board *board, char *input){
 
 int main(void){
     init_chess_engine();
-    printf("initialized engine\n");
     _board *board = cb_create_board();
 
     // display board

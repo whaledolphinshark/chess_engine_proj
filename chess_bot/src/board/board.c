@@ -273,6 +273,9 @@ void cb_make_move(_board *board, _move move){
     gl_append_item(board->previous_moves, &move_state);
 
     cb_calculate_game_state(board);
+    if (board->game_state != ONGOING){
+        board->move_count = 0;
+    }
 }
 
 void cb_undo_move(_board *board){
