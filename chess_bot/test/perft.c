@@ -211,7 +211,18 @@ int main(int argc, char *argv[]){
 
     int collect_stats = 0;
     if (argc == 2){
-        // check if collect stats here
+        char *flag = "-s";
+        for (int i = 0; i < 3; i++){
+            if (flag[i] != argv[1][i]){
+                fprintf(stderr, "Usage %s [-s]\n-s: Enable statistics tracking\n", argv[0]);
+                return 1;
+            }
+        }
+        collect_stats = 1;
+    }
+    else if (argc > 2){
+        fprintf(stderr, "Usage %s [-s]\n-s: Enable statistics tracking\n", argv[0]);
+        return 1;
     }
     pos_1(collect_stats);
     pos_2(collect_stats);
