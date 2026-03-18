@@ -57,9 +57,10 @@ void test_pos(int collect_stats, char *fen, int *expected_pos, int depth){
         if (collect_stats == 1){
             printf(", captures: %d, en passants: %d, castles %d, promotions: %d", stats[1], stats[2], stats[3], stats[4]);
         }
-        printf("\n\n");
+        printf("\n");
         stats[0] = stats[1] = stats[2] = stats[3] = stats[4] = 0;
     }
+    printf("\n");
     cb_destroy_board(board);
 }
 
