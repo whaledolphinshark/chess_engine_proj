@@ -7,11 +7,27 @@
 
 #define NUM_ITEMS 100000
 
-int main(){
-    _transposition_table *table = tt_create_transposition_table(sizeof(int));
-    srand(1);
+int main(int argc, char *argv[]){
+    if (argc == 2){
+        char *end_ptr;
+        unsigned long seed = strtoul(argv[1], &end_ptr, 10);
+        if (*end_ptr != '\0' || *argv[1] == '-'){
+            fprintf(stderr, "Usage: tt_test [seed]\nseed: positive integer that is the seed the program should use\n");
+            return 1;
+        }
+        srand((unsigned int)seed);
+    }
+    else if (argc > 2){
+        fprintf(stderr, "Usage: tt_test [seed]\nseed: positive integer that is the seed the program should use\n");
+        return 1;
+    }
+    else{
+        srand(1);
+    }
 
-    // // tiem to store items
+    _transposition_table *table = tt_create_transposition_table(sizeof(int));
+
+    // time to store items
     uint64_t *keys = malloc(sizeof(uint64_t) * NUM_ITEMS);
     if (keys == NULL){
         tt_destroy_transposition_table(table);
