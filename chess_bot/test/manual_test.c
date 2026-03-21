@@ -2,11 +2,13 @@
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
+#include <limits.h>
 
 #include "chess_engine/init_chess_engine.h"
 #include "chess_engine/chess_types.h"
 #include "chess_engine/moves.h"
 #include "chess_engine/board.h"
+#include "chess_engine/search.h"
 #include "utils/bitboard_util.h"
 #include "chess_engine/transposition_table.h"
 
@@ -60,6 +62,9 @@ void make_move_on_board(_board *board, char *input){
     if (board->game_state == ONGOING && valid == 1){
         cb_make_move(board, move);
         print_game_state(board);
+        _move best_move = se_search(board, 3, INT_MIN, INT_MAX);
+        printf("best move: ");
+        mv_print_move(best_move, 1);
     }
     else{
         printf("invalid move\n");
