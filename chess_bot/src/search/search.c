@@ -1,5 +1,4 @@
 #include <limits.h>
-#include <stdio.h>
 
 #include "chess_engine/search.h"
 #include "chess_engine/board.h"

@@ -9,7 +9,7 @@
 #include "chess_engine/board.h"
 #include "chess_engine/moves.h"
 
-#define DEPTH 3
+#define DEPTH 1
 
 int validate_board_move(_board *board, _move move){
     for (int i = 0; i < board->move_count; i++){
