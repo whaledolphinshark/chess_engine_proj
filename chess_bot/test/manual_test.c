@@ -62,9 +62,6 @@ void make_move_on_board(_board *board, char *input){
     if (board->game_state == ONGOING && valid == 1){
         cb_make_move(board, move);
         print_game_state(board);
-        _move best_move = se_search(board, 3, INT_MIN, INT_MAX);
-        printf("best move: ");
-        mv_print_move(best_move, 1);
     }
     else{
         printf("invalid move\n");
