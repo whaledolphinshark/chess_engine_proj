@@ -74,7 +74,7 @@ int player_move(_board *board, char *input){
 }
 
 int bot_move(_board *board){
-    _move move = se_search(board, DEPTH, INT_MIN, INT_MAX);
+    _move move = se_search(board, DEPTH, DEFAULT_ALPHA, DEFAULT_BETA);
     if (validate_board_move(board, move) == 1){
         cb_make_move(board, move);
         printf("bot played: ");
