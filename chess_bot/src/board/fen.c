@@ -136,7 +136,7 @@ void cb_fen_to_board(_board *board, char *fen){
     board->in_check = cb_is_square_attacked(king_square, board, board->board, board->turn) == 1;
 
     // moves
-    mv_generate_moves(board);
+    mv_generate_moves(board, board->move_pool, &(board->move_count));
 
     // zobrist hash and history
     board->zobrist_hash = cb_hash_board(board);

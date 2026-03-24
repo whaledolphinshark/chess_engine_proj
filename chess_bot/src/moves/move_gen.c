@@ -7,15 +7,15 @@
 
 #include <stdio.h>
 
-static void add_moves_to_buffer(_board *board, int square, uint64_t moves){
+static void add_moves_to_buffer(_board *board, _move move_buffer[MAX_MOVES], int *move_count, int square, uint64_t moves){
     while (moves != 0){
         int target = bb_pop_lsb(&moves) - 1;
-        board->move_pool[board->move_count] = mv_init_move(board, square, target, NONE);
-        board->move_count++;
+        move_buffer[*move_count] = mv_init_move(board, square, target, NONE);
+        (*move_count)++;
     }
 }
 
-static void add_pawn_moves_to_buffer(_board *board, int square, uint64_t moves){
+static void add_pawn_moves_to_buffer(_board *board, _move move_buffer[MAX_MOVES], int *move_count, int square, uint64_t moves){
     uint64_t promotion_rank;
     _piece promotions[4];
     if (board->turn == WHITE){
@@ -36,18 +36,18 @@ static void add_pawn_moves_to_buffer(_board *board, int square, uint64_t moves){
     while (moves != 0){
         int target = bb_pop_lsb(&moves) - 1;
         if (((1UL << target) & promotion_rank) == 0){
-            board->move_pool[board->move_count] = mv_init_move(board, square, target, NONE);
-            board->move_count++;
+            move_buffer[*move_count] = mv_init_move(board, square, target, NONE);
+            (*move_count)++;
         }
         else{
-            board->move_pool[board->move_count] = mv_init_move(board, square, target, promotions[0]);
-            board->move_count++;
-            board->move_pool[board->move_count] = mv_init_move(board, square, target, promotions[1]);
-            board->move_count++;
-            board->move_pool[board->move_count] = mv_init_move(board, square, target, promotions[2]);
-            board->move_count++;
-            board->move_pool[board->move_count] = mv_init_move(board, square, target, promotions[3]);
-            board->move_count++;
+            move_buffer[*move_count] = mv_init_move(board, square, target, promotions[0]);
+            (*move_count)++;
+            move_buffer[*move_count] = mv_init_move(board, square, target, promotions[1]);
+            (*move_count)++;
+            move_buffer[*move_count] = mv_init_move(board, square, target, promotions[2]);
+            (*move_count)++;
+            move_buffer[*move_count] = mv_init_move(board, square, target, promotions[3]);
+            (*move_count)++;
         }
     }
 }
@@ -247,8 +247,8 @@ static void get_pin_rays(int king_square, _board *board, _color side, uint64_t p
     }
 }
 
-void mv_generate_moves(_board *board){
-    board->move_count = 0;
+void mv_generate_moves(_board *board, _move move_buffer[MAX_MOVES], int *move_count){
+    *move_count = 0;
 
     uint64_t pawns, rooks, knights, bishops, queens, king;
     uint64_t friendly_pieces;
@@ -302,7 +302,7 @@ void mv_generate_moves(_board *board){
     }
 
     uint64_t king_moves = (king_attacks[king_square] & ~friendly_pieces & ~danger_squares) | castle_mask;
-    add_moves_to_buffer(board, king_square, king_moves);
+    add_moves_to_buffer(board, move_buffer, move_count, king_square, king_moves);
     if (non_king_moves_in_check == 0){
         return;
     }
@@ -313,7 +313,7 @@ void mv_generate_moves(_board *board){
         uint64_t blockers = rook_masks[square] & board->board;
         uint64_t index = (blockers * rook_magics[square]) >> rook_shifts[square];
         uint64_t moves = rook_attacks[square][index] & ~friendly_pieces & pin_ray_buffer[square] & non_king_moves_in_check;
-        add_moves_to_buffer(board, square, moves);
+        add_moves_to_buffer(board, move_buffer, move_count, square, moves);
     }
 
     // bishop
@@ -322,7 +322,7 @@ void mv_generate_moves(_board *board){
         uint64_t blockers = bishop_masks[square] & board->board;
         uint64_t index = (blockers * bishop_magics[square]) >> bishop_shifts[square];
         uint64_t moves = bishop_attacks[square][index] & ~friendly_pieces & pin_ray_buffer[square] & non_king_moves_in_check;
-        add_moves_to_buffer(board, square, moves);
+        add_moves_to_buffer(board, move_buffer, move_count, square, moves);
     }
 
     // queen
@@ -335,14 +335,14 @@ void mv_generate_moves(_board *board){
         uint64_t orthogonal_index = (orthogonal_blockers * rook_magics[square]) >> rook_shifts[square];
         uint64_t orthogonal_moves = rook_attacks[square][orthogonal_index] & ~friendly_pieces;
         uint64_t moves = (diagonal_moves | orthogonal_moves) & pin_ray_buffer[square] & non_king_moves_in_check;
-        add_moves_to_buffer(board, square, moves);
+        add_moves_to_buffer(board, move_buffer, move_count, square, moves);
     }
 
     // knight
     while (knights != 0){
         int square = bb_pop_lsb(&knights) - 1;
         uint64_t moves = knight_attacks[square] & ~friendly_pieces & pin_ray_buffer[square] & non_king_moves_in_check;
-        add_moves_to_buffer(board, square, moves);
+        add_moves_to_buffer(board, move_buffer, move_count, square, moves);
     }
 
     // pawn
@@ -357,18 +357,18 @@ void mv_generate_moves(_board *board){
         uint64_t attack_mask = pawn_attacks[board->turn][square] & ~friendly_pieces & (enemy_pieces | en_passant_mask);
         uint64_t movement_mask = (board->board & forward) != 0 ? 0 : pawn_moves[board->turn][square] & ~board->board;
         uint64_t moves = (attack_mask | movement_mask) & pin_ray_buffer[square] & non_king_moves_in_check;
-        add_pawn_moves_to_buffer(board, square, moves);
+        add_pawn_moves_to_buffer(board, move_buffer, move_count, square, moves);
     }
 }
 
-void mv_generate_enemy_moves(_board *board, _move move_buffer[MAX_MOVES]){
+void mv_generate_enemy_moves(_board *board, _move move_buffer[MAX_MOVES], int *move_count){
     int temp_en_passant_square = board->en_passant_square;
     int temp_turn = board->turn;
     int temp_check = board->in_check;
     board->en_passant_square = 0;
     board->turn = board->turn == WHITE ? BLACK : WHITE;
     board->in_check = 0;
-    // mv_generate_moves(board);
+    mv_generate_moves(board, move_buffer, move_count);
     board->en_passant_square = temp_en_passant_square;
     board->turn = temp_turn;
     board->in_check = temp_check;

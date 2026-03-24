@@ -113,7 +113,7 @@ _board *cb_create_board(){
     
     board->previous_moves = (_list *)gl_create_list(sizeof(_move_state));
 
-    mv_generate_moves(board);
+    mv_generate_moves(board, board->move_pool, &(board->move_count));
 
     return board;
 }
@@ -257,7 +257,7 @@ void cb_make_move(_board *board, _move move){
     // handle checks
     board->in_check = cb_is_square_attacked(bb_get_lsb(potential_king_in_check) - 1, board, board->board, board->turn);
 
-    mv_generate_moves(board);
+    mv_generate_moves(board, board->move_pool, &(board->move_count));
 
     // update history
     if (tt_is_key_in_table(board->history, board->zobrist_hash) == 1){
@@ -361,7 +361,7 @@ void cb_undo_move(_board *board){
     board->black_pieces = board->bitboards[B_KING] | board->bitboards[B_PAWN] | board->bitboards[B_ROOK] | board->bitboards[B_BISHOP] | board->bitboards[B_KNIGHT] | board->bitboards[B_QUEEN];
     board->board = board->white_pieces | board->black_pieces;
 
-    mv_generate_moves(board);
+    mv_generate_moves(board, board->move_pool, &(board->move_count));
 
     gl_remove_item(board->previous_moves, prev_moves_count - 1);
 }
