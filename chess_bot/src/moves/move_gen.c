@@ -360,3 +360,16 @@ void mv_generate_moves(_board *board){
         add_pawn_moves_to_buffer(board, square, moves);
     }
 }
+
+void mv_generate_enemy_moves(_board *board, _move move_buffer[MAX_MOVES]){
+    int temp_en_passant_square = board->en_passant_square;
+    int temp_turn = board->turn;
+    int temp_check = board->in_check;
+    board->en_passant_square = 0;
+    board->turn = board->turn == WHITE ? BLACK : WHITE;
+    board->in_check = 0;
+    // mv_generate_moves(board);
+    board->en_passant_square = temp_en_passant_square;
+    board->turn = temp_turn;
+    board->in_check = temp_check;
+}
