@@ -87,7 +87,7 @@ int main(int argc, char *argv[]){
 
     // check number of entries
     if (tt_get_num_items(table) != num_items){
-        printf("number of items in table does not equal number of items inserted: %d != %d", tt_get_num_items(table), num_items);
+        printf("number of items in table does not equal number of items inserted: %d != %d\n", tt_get_num_items(table), num_items);
     }
 
     // time to retrieve items
@@ -123,7 +123,7 @@ int main(int argc, char *argv[]){
         return 1;
     }
     for (int i = 0; i < num_items; i++){
-        new_values[i] = 3 * i;
+        new_values[i] = 3 * values[i];
     }
     start = clock();
     for (int i = 0; i < num_items; i++){
@@ -139,6 +139,11 @@ int main(int argc, char *argv[]){
             printf("item not successfully updated: %d != %d\n", updated_value, new_values[i]);
             break;
         }
+    }
+
+    // check number of entries
+    if (tt_get_num_items(table) != num_items){
+        printf("number of items in table does not equal number of items inserted after updates: %d != %d\n", tt_get_num_items(table), num_items);
     }
 
     // time to check keys
@@ -186,6 +191,11 @@ int main(int argc, char *argv[]){
         if (deletes[i] != 1){
             printf("entry not deleted: %lu\n", keys[i]);
         }
+    }
+
+    // check number of entries
+    if (tt_get_num_items(table) != 0){
+        printf("number of items in table does not equal 0: %d != %d\n", tt_get_num_items(table), 0);
     }
 
     free(keys);

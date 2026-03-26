@@ -32,13 +32,19 @@ static int place_entry(_key_value_pair *buckets, _key_value_pair *entry, uint64_
         bucket->value = entry->value;
         return 1;
     }
+    else if(bucket->hash == entry->hash){
+        free(bucket->value);
+        bucket->value = entry->value;
+        return -1;
+    }
     else{
-        if (bucket->hash == entry->hash){
-            bucket->value = entry->value;
-            return -1;
-        }
         while (bucket->next != NULL){
             bucket = bucket->next;
+            if (bucket->hash == entry->hash){
+                free(bucket->value);
+                bucket->value = entry->value;
+                return -1;
+            }
         }
         bucket->next = entry;
     }
@@ -137,7 +143,9 @@ void tt_insert_item(_transposition_table *hash_table, uint64_t zobrist_hash, voi
         free(entry);
     }
 
-    hash_table->num_items++;
+    if (code != -1){
+        hash_table->num_items++;
+    }
 }
 
 void *tt_get_item(_transposition_table *hash_table, uint64_t zobrist_hash){
