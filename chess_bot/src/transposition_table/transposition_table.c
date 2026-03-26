@@ -20,9 +20,9 @@ static _key_value_pair *malloc_buckets(uint64_t num_buckets){
     return new_buckets;
 }
 
-// 1 if found open spot in which case values of entry are copied and entry needs to be freed if malloced
+// 1 if found open spot in which case value of entry are copied and entry needs to be freed if malloced
 // 0 if entry is placed in a linked list and does not need to be freed
-// -1 if entry is already there
+// -1 if entry was already there and its value was replaced
 static int place_entry(_key_value_pair *buckets, _key_value_pair *entry, uint64_t index){
     _key_value_pair *bucket = &(buckets[index]);
     if (bucket->occupancy == EMPTY){
@@ -34,6 +34,7 @@ static int place_entry(_key_value_pair *buckets, _key_value_pair *entry, uint64_
     }
     else{
         if (bucket->hash == entry->hash){
+            bucket->value = entry->value;
             return -1;
         }
         while (bucket->next != NULL){
@@ -132,11 +133,7 @@ void tt_insert_item(_transposition_table *hash_table, uint64_t zobrist_hash, voi
     entry->value = item_ptr;
 
     int code = place_entry(hash_table->buckets, entry, entry->hash % hash_table->num_buckets);
-    if (code == 1){
-        free(entry);
-    }
-    else if (code == -1){
-        free(entry->value);
+    if (code == 1 || code == -1){
         free(entry);
     }
 
@@ -281,6 +278,10 @@ int tt_get_num_items(_transposition_table *hash_table){
     }
 
     return hash_table->num_items;
+}
+
+unsigned long tt_get_item_size(_transposition_table *hash_table){
+    return hash_table->item_size;
 }
 
 void tt_destroy_transposition_table(_transposition_table *hash_table){
