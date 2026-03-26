@@ -2,6 +2,7 @@
 #include <limits.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include "chess_engine/chess_types.h"
 #include "chess_engine/init_chess_engine.h"
@@ -10,7 +11,7 @@
 #include "chess_engine/moves.h"
 #include "chess_engine/transposition_table.h"
 
-#define DEPTH 5
+#define DEPTH 6
 
 int validate_board_move(_board *board, _move move){
     for (int i = 0; i < board->move_count; i++){
@@ -24,30 +25,36 @@ int validate_board_move(_board *board, _move move){
 
 void print_game_state(_board *board){
     char fen[MAX_FEN_LENGTH];
-
     cb_board_to_fen(board, fen);
-    printf("fen: %s\n", fen);
+    printf("%s\n", fen);
     cb_display_fen(fen);
-    printf("plies: %d\n", board->plies);
 
     switch (board->game_state){
-            case W_WIN:
-                printf("white wins\n");
-                break;
-            case B_WIN:
-                printf("black wins\n");
-                break;
-            case DRAW:
-                printf("draw\n");
-                break;
-            case ONGOING:
-                if (board->in_check == 1){
-                    printf("in check\n");
-                }
-                mv_print_moves(board);
-                printf("\n");
-                break;
-        }
+        case W_WIN:
+            printf("white wins\n");
+            break;
+        case B_WIN:
+            printf("black wins\n");
+            break;
+        case DRAW:
+            printf("draw\n");
+            break;
+        case ONGOING:
+            if (board->in_check == 1){
+                printf("in check\n");
+            }
+            mv_print_moves(board);
+            break;
+    }
+
+    if (board->turn == WHITE){
+        printf("white to move\n");
+    }
+    else{
+        printf("black to move\n");
+    }
+
+    printf("\n");
 }
 
 int undo_board_move(_board *board, int num_moves){
@@ -75,11 +82,14 @@ int player_move(_board *board, char *input){
 }
 
 int bot_move(_board *board, _transposition_table *transposition_table){
+    clock_t start = clock();
     _move move = se_search(board, DEPTH, DEFAULT_ALPHA, DEFAULT_BETA, transposition_table);
+    clock_t end = clock();
     if (validate_board_move(board, move) == 1){
         cb_make_move(board, move);
         printf("bot played: ");
-        mv_print_move(move, 1);
+        mv_print_move(move, 0);
+        printf(", time taken: %f seconds, depth: %d\n", ((double) (end - start)) / CLOCKS_PER_SEC, DEPTH);
         print_game_state(board);
         return 1;
     }
