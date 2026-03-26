@@ -126,7 +126,7 @@ void tt_insert_item(_transposition_table *hash_table, uint64_t zobrist_hash, voi
         resize_table(hash_table, 1);
     }
 
-    void *item_ptr = malloc(sizeof(hash_table->item_size));
+    void *item_ptr = malloc(hash_table->item_size);
     _key_value_pair *entry = (_key_value_pair *)malloc(sizeof(_key_value_pair));
     if (item_ptr == NULL || entry == NULL){
         eh_die("malloc() failed");
