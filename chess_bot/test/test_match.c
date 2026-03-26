@@ -11,7 +11,7 @@
 #include "chess_engine/moves.h"
 #include "chess_engine/transposition_table.h"
 
-#define DEPTH 6
+#define DEPTH 5
 
 int validate_board_move(_board *board, _move move){
     for (int i = 0; i < board->move_count; i++){
