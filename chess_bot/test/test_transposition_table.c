@@ -49,7 +49,7 @@ int main(int argc, char *argv[]){
         unsigned long s = strtoul(arg_s, &end_ptr, 10);
         if (*end_ptr != '\0' || *arg_s == '-'){
             fprintf(stderr, "Error: invalid argument '%s'\n", arg_s);
-            fprintf(stderr, "Usage: tt_test [-s] [-n]\n-s: positive integer that is the seed the program should use\n-n: number of items the program should use\n");
+            fprintf(stderr, "Usage: tt_test [-s] [-n]\n-s: non negative integer that is the seed the program should use\n-n: number of items the program should use\n");
             return 1;
         }
         seed = (unsigned int)s;
@@ -59,13 +59,13 @@ int main(int argc, char *argv[]){
         unsigned long n = strtoul(arg_n, &end_ptr, 10);
         if (*end_ptr != '\0' || *arg_n == '-'){
             fprintf(stderr, "Error: invalid argument '%s'\n", arg_n);
-            fprintf(stderr, "Usage: tt_test [-s] [-n]\n-s: positive integer that is the seed the program should use\n-n: number of items the program should use\n");
+            fprintf(stderr, "Usage: tt_test [-s] [-n]\n-s: non negative integer that is the seed the program should use\n-n: number of items the program should use\n");
             return 1;
         }
         num_items = (unsigned int)n;
     }
-    srand(seed);
 
+    srand(seed);
     _transposition_table *table = tt_create_transposition_table(sizeof(int));
 
     // time to store items
@@ -113,11 +113,40 @@ int main(int argc, char *argv[]){
         }
     }
 
+    // time to update items
+    int *new_values = malloc(sizeof(int) * num_items);
+    if (values == NULL){
+        free(keys);
+        free(values);
+        tt_destroy_transposition_table(table);
+        printf("malloc() failed\n");
+        return 1;
+    }
+    for (int i = 0; i < num_items; i++){
+        new_values[i] = 3 * i;
+    }
+    start = clock();
+    for (int i = 0; i < num_items; i++){
+        tt_insert_item(table, keys[i], &(new_values[i]));
+    }
+    end = clock();
+    printf("time to change %d entries: %f seconds\n", num_items, ((double) (end - start)) / CLOCKS_PER_SEC);
+
+    // validate items updated
+    for (int i = 0; i < num_items; i++){
+        int updated_value = *((int *)tt_get_item(table, keys[i]));
+        if (updated_value != new_values[i]){
+            printf("item not successfully updated: %d != %d\n", updated_value, new_values[i]);
+            break;
+        }
+    }
+
     // time to check keys
     int *checks = malloc(sizeof(int) * num_items);
     if (checks == NULL){
         free(keys);
         free(values);
+        free(new_values);
         tt_destroy_transposition_table(table);
         return 1;
     }
@@ -140,6 +169,7 @@ int main(int argc, char *argv[]){
     if (deletes == NULL){
         free(keys);
         free(values);
+        free(new_values);
         free(checks);
         tt_destroy_transposition_table(table);
         return 1;
@@ -160,6 +190,7 @@ int main(int argc, char *argv[]){
 
     free(keys);
     free(values);
+    free(new_values);
     free(checks);
     free(deletes);
     tt_destroy_transposition_table(table);

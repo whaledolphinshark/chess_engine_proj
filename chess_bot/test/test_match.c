@@ -8,6 +8,7 @@
 #include "chess_engine/search.h"
 #include "chess_engine/board.h"
 #include "chess_engine/moves.h"
+#include "chess_engine/transposition_table.h"
 
 #define DEPTH 5
 
@@ -73,8 +74,8 @@ int player_move(_board *board, char *input){
     return 0;
 }
 
-int bot_move(_board *board){
-    _move move = se_search(board, DEPTH, DEFAULT_ALPHA, DEFAULT_BETA);
+int bot_move(_board *board, _transposition_table *transposition_table){
+    _move move = se_search(board, DEPTH, DEFAULT_ALPHA, DEFAULT_BETA, transposition_table);
     if (validate_board_move(board, move) == 1){
         cb_make_move(board, move);
         printf("bot played: ");
@@ -109,12 +110,13 @@ int main(int argc, char *argv[]){
     }
 
     init_chess_engine();
+    _transposition_table *transposition_table = tt_create_transposition_table(sizeof(_tt_search_entry));
     _board *board = cb_create_board();
     cb_fen_to_board(board, START_FEN);
     print_game_state(board);
 
     if (side == WHITE){
-        bot_move(board);
+        bot_move(board, transposition_table);
     }
 
     char input[MAX_MOVE_BUFFER_SIZE];
@@ -141,7 +143,7 @@ int main(int argc, char *argv[]){
             num_moves++;
         }
 
-        int success = bot_move(board);
+        int success = bot_move(board, transposition_table);
         if (success == 0){
             fprintf(stderr, "error: invalid move played\n");
             cb_destroy_board(board);
