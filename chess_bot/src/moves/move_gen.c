@@ -247,6 +247,34 @@ static void get_pin_rays(int king_square, _board *board, _color side, uint64_t p
     }
 }
 
+static uint64_t get_rook_moves(const uint64_t pieces, const int square){
+    const uint64_t blockers = rook_masks[square] & pieces;
+    const uint64_t index = (blockers * rook_magics[square]) >> rook_shifts[square];
+    return rook_attacks[square][index];
+}
+
+static uint64_t get_bishop_moves(const uint64_t pieces, const int square){
+    const uint64_t blockers = bishop_masks[square] & pieces;
+    const uint64_t index = (blockers * bishop_magics[square]) >> bishop_shifts[square];
+    return bishop_attacks[square][index];
+}
+
+static uint64_t get_king_moves(_board *board, const int king_square, const uint64_t friendly_pieces){
+    const uint64_t castle_mask = board->in_check == 1 ? 0 : castle_moves[board->turn][check_castle(board, board->turn)];
+    const uint64_t occupied = board->board ^ (1UL << king_square);
+    uint64_t potential_danger_squares = king_attacks[king_square] & ~friendly_pieces;
+    uint64_t danger_squares = 0UL;
+    while (potential_danger_squares != 0){
+        const int square = bb_pop_lsb(&potential_danger_squares) - 1;
+        if (cb_is_square_attacked(square, board, occupied, board->turn) == 1){
+            danger_squares |= (1UL << square);
+            // i can make it quicker i think
+        }
+    }
+
+    return (king_attacks[king_square] & ~friendly_pieces & ~danger_squares) | castle_mask;
+}
+
 void mv_generate_moves(_board *board, _move move_buffer[MAX_MOVES], int *move_count){
     *move_count = 0;
 
@@ -272,76 +300,45 @@ void mv_generate_moves(_board *board, _move move_buffer[MAX_MOVES], int *move_co
     }
 
     uint64_t pin_ray_buffer[64];
-    int king_square = bb_get_lsb(king) - 1;
+    const int king_square = bb_get_lsb(king) - 1;
     get_pin_rays(king_square, board, board->turn, pin_ray_buffer);
 
-    // if king in check
-    uint64_t castle_mask;
-    uint64_t non_king_moves_in_check;
     int en_passant_checker = 0;
-    if (board->in_check == 1){
-        non_king_moves_in_check = get_legal_non_king_moves_in_check(board, board->turn, king_square, &en_passant_checker);
-        castle_mask = 0;
-    }
-    else{
-        non_king_moves_in_check = UINT64_MAX;
-        castle_mask = castle_moves[board->turn][check_castle(board, board->turn)];
-    }
-
-    // king
-    // get danger squares
-    uint64_t potential_danger_squares = king_attacks[king_square] & ~friendly_pieces;
-    uint64_t occupied = board->board ^ (1UL << king_square);
-    uint64_t danger_squares = 0UL;
-    while (potential_danger_squares != 0){
-        int square = bb_pop_lsb(&potential_danger_squares) - 1;
-        if (cb_is_square_attacked(square, board, occupied, board->turn) == 1){
-            danger_squares |= (1UL << square);
-            // i can make it quicker i think
-        }
-    }
-
-    uint64_t king_moves = (king_attacks[king_square] & ~friendly_pieces & ~danger_squares) | castle_mask;
+    uint64_t non_king_moves_in_check = board->in_check == 1 ? get_legal_non_king_moves_in_check(board, board->turn, king_square, &en_passant_checker) : UINT64_MAX;
+    const uint64_t king_moves = get_king_moves(board, king_square, friendly_pieces);
     add_moves_to_buffer(board, move_buffer, move_count, king_square, king_moves);
+
     if (non_king_moves_in_check == 0){
         return;
     }
 
     // rook
     while (rooks != 0){
-        int square = bb_pop_lsb(&rooks) - 1;
-        uint64_t blockers = rook_masks[square] & board->board;
-        uint64_t index = (blockers * rook_magics[square]) >> rook_shifts[square];
-        uint64_t moves = rook_attacks[square][index] & ~friendly_pieces & pin_ray_buffer[square] & non_king_moves_in_check;
+        const int square = bb_pop_lsb(&rooks) - 1;
+        const uint64_t moves = get_rook_moves(board->board, square) & ~friendly_pieces & pin_ray_buffer[square] & non_king_moves_in_check;
         add_moves_to_buffer(board, move_buffer, move_count, square, moves);
     }
 
     // bishop
     while (bishops != 0){
-        int square = bb_pop_lsb(&bishops) - 1;
-        uint64_t blockers = bishop_masks[square] & board->board;
-        uint64_t index = (blockers * bishop_magics[square]) >> bishop_shifts[square];
-        uint64_t moves = bishop_attacks[square][index] & ~friendly_pieces & pin_ray_buffer[square] & non_king_moves_in_check;
+        const int square = bb_pop_lsb(&bishops) - 1;
+        const uint64_t moves = get_bishop_moves(board->board, square) & ~friendly_pieces & pin_ray_buffer[square] & non_king_moves_in_check;
         add_moves_to_buffer(board, move_buffer, move_count, square, moves);
     }
 
     // queen
     while (queens != 0){
-        int square = bb_pop_lsb(&queens) - 1;
-        uint64_t diagonal_blockers = bishop_masks[square] & board->board;
-        uint64_t diagonal_index = (diagonal_blockers * bishop_magics[square]) >> bishop_shifts[square];
-        uint64_t diagonal_moves = bishop_attacks[square][diagonal_index] & ~friendly_pieces;
-        uint64_t orthogonal_blockers = rook_masks[square] & board->board;
-        uint64_t orthogonal_index = (orthogonal_blockers * rook_magics[square]) >> rook_shifts[square];
-        uint64_t orthogonal_moves = rook_attacks[square][orthogonal_index] & ~friendly_pieces;
-        uint64_t moves = (diagonal_moves | orthogonal_moves) & pin_ray_buffer[square] & non_king_moves_in_check;
+        const int square = bb_pop_lsb(&queens) - 1;
+        const uint64_t orthogonal_moves = get_rook_moves(board->board, square);
+        const uint64_t diagonal_moves = get_bishop_moves(board->board, square);
+        const uint64_t moves = (diagonal_moves | orthogonal_moves) & ~friendly_pieces & pin_ray_buffer[square] & non_king_moves_in_check;
         add_moves_to_buffer(board, move_buffer, move_count, square, moves);
     }
 
     // knight
     while (knights != 0){
-        int square = bb_pop_lsb(&knights) - 1;
-        uint64_t moves = knight_attacks[square] & ~friendly_pieces & pin_ray_buffer[square] & non_king_moves_in_check;
+        const int square = bb_pop_lsb(&knights) - 1;
+        const uint64_t moves = knight_attacks[square] & ~friendly_pieces & pin_ray_buffer[square] & non_king_moves_in_check;
         add_moves_to_buffer(board, move_buffer, move_count, square, moves);
     }
 
@@ -373,3 +370,22 @@ void mv_generate_enemy_moves(_board *board, _move move_buffer[MAX_MOVES], int *m
     board->turn = temp_turn;
     board->in_check = temp_check;
 }
+
+// int mv_has_moves(_board *board){
+//     int king_square;
+//     if (board->turn == WHITE){
+//         king_square = bb_get_lsb(board->bitboards[W_KING]) - 1;
+//     }
+//     else{
+//         king_square = bb_get_lsb(board->bitboards[B_KING]) - 1;
+//     }
+
+//     if (board->in_check == 1){
+//         // check if king has moves
+
+//         // check other pieces
+//         int en_passant_checker = 0;
+//         uint64_t potential_legal_moves = get_legal_non_king_moves_in_check(board, board->turn, king_square, &en_passant_checker);
+        
+//     }
+// }
