@@ -318,6 +318,7 @@ void mv_generate_moves(_board *restrict board, _move move_buffer[restrict MAX_MO
 
     int en_passant_checker = 0;
     uint64_t non_king_moves_in_check = board->in_check == 1 ? get_legal_non_king_moves_in_check(board, board->turn, king_square, &en_passant_checker) : UINT64_MAX;
+    // if there are multiple checkers, non_king_moves_in_check will be 0
     if (non_king_moves_in_check == 0){
         return;
     }
@@ -363,7 +364,7 @@ void mv_generate_moves(_board *restrict board, _move move_buffer[restrict MAX_MO
     }
 }
 
-void mv_generate_enemy_moves(_board *board, _move move_buffer[MAX_MOVES], int *move_count){
+void mv_generate_enemy_moves(_board *restrict board, _move move_buffer[restrict MAX_MOVES], int *restrict move_count){
     int temp_en_passant_square = board->en_passant_square;
     int temp_turn = board->turn;
     int temp_check = board->in_check;
@@ -376,7 +377,7 @@ void mv_generate_enemy_moves(_board *board, _move move_buffer[MAX_MOVES], int *m
     board->in_check = temp_check;
 }
 
-int mv_has_moves(_board *board){
+int mv_has_moves(_board *restrict board){
     uint64_t pawns, rooks, knights, bishops, queens, king;
     uint64_t friendly_pieces;
     if (board->turn == WHITE){

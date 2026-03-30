@@ -10,7 +10,7 @@
 #include "utils/bitboard_util.h"
 #include "utils/error_handling.h"
 
-void cb_calculate_game_state(_board *board, int has_moves){
+void cb_calculate_game_state(_board *restrict board, const int has_moves){
     // checkmate, stalemate, 50 move rule
     if (board->in_check == 1 && has_moves == 0){
         board->game_state = board->turn == WHITE ? B_WIN : W_WIN;
@@ -119,7 +119,7 @@ _board *cb_create_board(){
 }
 
 // assumes move is valid
-void cb_make_move(_board *board, _move move){
+void cb_make_move(_board *restrict board, const _move move){
     if (board->game_state != ONGOING){
         eh_die("game has ended");
     }
@@ -273,7 +273,7 @@ void cb_make_move(_board *board, _move move){
     cb_calculate_game_state(board, mv_has_moves(board));
 }
 
-void cb_undo_move(_board *board){
+void cb_undo_move(_board *restrict board){
     unsigned long prev_moves_count = gl_get_length(board->previous_moves);
     if (prev_moves_count == 0){
         eh_die("no moves to undo");

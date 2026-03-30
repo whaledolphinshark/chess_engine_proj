@@ -5,7 +5,7 @@
 #include "moves_internal.h"
 #include "utils/error_handling.h"
 
-int mv_moves_equal(_move left, _move right){
+int mv_moves_equal(const _move left, const _move right){
     return left.from == right.from && left.to == right.to && left.piece == right.piece && left.promotion == right.promotion && left.capture == right.capture && left.special_move == right.special_move;
 }
 
