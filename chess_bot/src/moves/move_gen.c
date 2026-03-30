@@ -7,15 +7,14 @@
 
 #include <stdio.h>
 
-static void add_moves_to_buffer(_board *board, _move move_buffer[MAX_MOVES], int *move_count, int square, uint64_t moves){
+static void add_moves_to_buffer(_board *restrict board, _move move_buffer[restrict MAX_MOVES], int *restrict move_count, const int square, uint64_t moves){
     while (moves != 0){
-        int target = bb_pop_lsb(&moves) - 1;
-        move_buffer[*move_count] = mv_init_move(board, square, target, NONE);
+        move_buffer[*move_count] = mv_init_move(board, square, bb_pop_lsb(&moves) - 1, NONE);
         (*move_count)++;
     }
 }
 
-static void add_pawn_moves_to_buffer(_board *board, _move move_buffer[MAX_MOVES], int *move_count, int square, uint64_t moves){
+static void add_pawn_moves_to_buffer(_board *restrict board, _move move_buffer[restrict MAX_MOVES], int *restrict move_count, const int square, uint64_t moves){
     uint64_t promotion_rank;
     _piece promotions[4];
     if (board->turn == WHITE){
@@ -34,7 +33,7 @@ static void add_pawn_moves_to_buffer(_board *board, _move move_buffer[MAX_MOVES]
     }
 
     while (moves != 0){
-        int target = bb_pop_lsb(&moves) - 1;
+        const int target = bb_pop_lsb(&moves) - 1;
         if (((1UL << target) & promotion_rank) == 0){
             move_buffer[*move_count] = mv_init_move(board, square, target, NONE);
             (*move_count)++;
@@ -53,7 +52,7 @@ static void add_pawn_moves_to_buffer(_board *board, _move move_buffer[MAX_MOVES]
 }
 
 // returns an int, 0 no castle, 1 left castle, 2 right castle, 3 both
-static int check_castle(_board *board, _color side){
+static int check_castle(_board *restrict board, const _color side){
     if (board->in_check == 1){
         return 0;
     }
@@ -94,7 +93,7 @@ static int check_castle(_board *board, _color side){
 // with an exception where a checking pawn can be captured by en passant
 // such a case is detected with en_passant_checker and needs to be handled separately outside the function
 // function assumes there is at least one checking piece
-static uint64_t get_legal_non_king_moves_in_check(_board *board, _color side, int king_square, int *en_passant_checker){
+static uint64_t get_legal_non_king_moves_in_check(_board *restrict board, const _color side, const int king_square, int *restrict en_passant_checker){
     // pawns, knights
     uint64_t pawns;
     uint64_t knights;
@@ -159,7 +158,7 @@ static uint64_t get_legal_non_king_moves_in_check(_board *board, _color side, in
     return non_king_moves_in_check;
 }
 
-static void get_pin_rays(int king_square, _board *board, _color side, uint64_t pin_ray_buffer[64]){
+static void get_pin_rays(const int king_square, _board *restrict board, const _color side, uint64_t pin_ray_buffer[restrict 64]){
     uint64_t friendly_pieces;
     // 0 = diagonal, 1 = orthogonal
     uint64_t attackers[2];
@@ -187,7 +186,7 @@ static void get_pin_rays(int king_square, _board *board, _color side, uint64_t p
 
     // from northwest clockwise
     for (int i = 0; i < 8; i++){
-        uint64_t ray = rays[king_square][i];
+        const uint64_t ray = rays[king_square][i];
         uint64_t occupied = ray & board->board;
         if (bb_get_bits_set(occupied) < 2){
             continue;
@@ -210,7 +209,7 @@ static void get_pin_rays(int king_square, _board *board, _color side, uint64_t p
 
     // check for special case of en passant being pinned by horizontal slider, example: 8/2p5/3p4/KP5r/1R3pPk/8/4P3/8 b - g3 0 1
     if (board->en_passant_square != 0 && bb_get_bits_set(target_pawn_neighbors) == 1){
-        int pinned_square = bb_pop_lsb(&target_pawn_neighbors) - 1;
+        const int pinned_square = bb_pop_lsb(&target_pawn_neighbors) - 1;
         // check if that piece is a pawn or not
         if (((1UL << pinned_square) & friendly_pawns) == 0){
             return;
@@ -219,7 +218,7 @@ static void get_pin_rays(int king_square, _board *board, _color side, uint64_t p
         // detect if king is on the same rank
         if (pinned_square / 8 == king_square / 8){
             // from that king fire ray in direction of pinned_square and see if it hits a rook or queen
-            int target_pawn_square = board->en_passant_square + (side == WHITE ? -8 : 8);
+            const int target_pawn_square = board->en_passant_square + (side == WHITE ? -8 : 8);
             uint64_t pieces = board->board & ~((1UL << pinned_square) | (1UL << target_pawn_square));
             int pinner_square;
             if (king_square % 8 > pinned_square % 8){
@@ -247,19 +246,19 @@ static void get_pin_rays(int king_square, _board *board, _color side, uint64_t p
     }
 }
 
-static uint64_t get_semi_legal_rook_moves(_board *board, const int square){
+static uint64_t get_semi_legal_rook_moves(_board *restrict board, const int square){
     const uint64_t blockers = rook_masks[square] & board->board;
     const uint64_t index = (blockers * rook_magics[square]) >> rook_shifts[square];
     return rook_attacks[square][index];
 }
 
-static uint64_t get_semi_legal_bishop_moves(_board *board, const int square){
+static uint64_t get_semi_legal_bishop_moves(_board *restrict board, const int square){
     const uint64_t blockers = bishop_masks[square] & board->board;
     const uint64_t index = (blockers * bishop_magics[square]) >> bishop_shifts[square];
     return bishop_attacks[square][index];
 }
 
-static uint64_t get_semi_legal_pawn_moves(_board *board, const int square){
+static uint64_t get_semi_legal_pawn_moves(_board *restrict board, const int square){
     const uint64_t friendly_pieces = board->turn == WHITE ? board->white_pieces : board->black_pieces;
     const uint64_t enemy_pieces = board->board ^ friendly_pieces;
     const uint64_t en_passant_mask = board->en_passant_square == 0 ? 0 : 1UL << board->en_passant_square;
@@ -269,7 +268,7 @@ static uint64_t get_semi_legal_pawn_moves(_board *board, const int square){
     return attack_mask | movement_mask;
 }
 
-static uint64_t get_legal_king_moves(_board *board, const int king_square){
+static uint64_t get_legal_king_moves(_board *restrict board, const int king_square){
     const uint64_t friendly_pieces = board->turn == WHITE ? board->white_pieces : board->black_pieces;
     const uint64_t castle_mask = board->in_check == 1 ? 0 : castle_moves[board->turn][check_castle(board, board->turn)];
     const uint64_t occupied = board->board ^ (1UL << king_square);
@@ -286,7 +285,7 @@ static uint64_t get_legal_king_moves(_board *board, const int king_square){
     return (king_attacks[king_square] & ~friendly_pieces & ~danger_squares) | castle_mask;
 }
 
-void mv_generate_moves(_board *board, _move move_buffer[MAX_MOVES], int *move_count){
+void mv_generate_moves(_board *restrict board, _move move_buffer[restrict MAX_MOVES], int *restrict move_count){
     *move_count = 0;
 
     uint64_t pawns, rooks, knights, bishops, queens, king;
@@ -358,8 +357,8 @@ void mv_generate_moves(_board *board, _move move_buffer[MAX_MOVES], int *move_co
         non_king_moves_in_check |= (1UL << board->en_passant_square);
     }
     while (pawns != 0){
-        int square = bb_pop_lsb(&pawns) - 1;
-        uint64_t moves = get_semi_legal_pawn_moves(board, square) & pin_ray_buffer[square] & non_king_moves_in_check;
+        const int square = bb_pop_lsb(&pawns) - 1;
+        const uint64_t moves = get_semi_legal_pawn_moves(board, square) & pin_ray_buffer[square] & non_king_moves_in_check;
         add_pawn_moves_to_buffer(board, move_buffer, move_count, square, moves);
     }
 }
@@ -377,97 +376,92 @@ void mv_generate_enemy_moves(_board *board, _move move_buffer[MAX_MOVES], int *m
     board->in_check = temp_check;
 }
 
-// int mv_has_moves(_board *board){
-//     uint64_t pawns, rooks, knights, bishops, queens, king;
-//     uint64_t friendly_pieces;
-//     if (board->turn == WHITE){
-//         pawns = board->bitboards[W_PAWN];
-//         rooks = board->bitboards[W_ROOK];
-//         knights = board->bitboards[W_KNIGHT];
-//         bishops = board->bitboards[W_BISHOP];
-//         queens = board->bitboards[W_QUEEN];
-//         king = board->bitboards[W_KING];
-//         friendly_pieces = board->white_pieces;
-//     }
-//     else{
-//         pawns = board->bitboards[B_PAWN];
-//         rooks = board->bitboards[B_ROOK];
-//         knights = board->bitboards[B_KNIGHT];
-//         bishops = board->bitboards[B_BISHOP];
-//         queens = board->bitboards[B_QUEEN];
-//         king = board->bitboards[B_KING];
-//         friendly_pieces = board->black_pieces;
-//     }
+int mv_has_moves(_board *board){
+    uint64_t pawns, rooks, knights, bishops, queens, king;
+    uint64_t friendly_pieces;
+    if (board->turn == WHITE){
+        pawns = board->bitboards[W_PAWN];
+        rooks = board->bitboards[W_ROOK];
+        knights = board->bitboards[W_KNIGHT];
+        bishops = board->bitboards[W_BISHOP];
+        queens = board->bitboards[W_QUEEN];
+        king = board->bitboards[W_KING];
+        friendly_pieces = board->white_pieces;
+    }
+    else{
+        pawns = board->bitboards[B_PAWN];
+        rooks = board->bitboards[B_ROOK];
+        knights = board->bitboards[B_KNIGHT];
+        bishops = board->bitboards[B_BISHOP];
+        queens = board->bitboards[B_QUEEN];
+        king = board->bitboards[B_KING];
+        friendly_pieces = board->black_pieces;
+    }
 
-//     uint64_t pin_ray_buffer[64];
-//     const int king_square = bb_get_lsb(king) - 1;
-//     get_pin_rays(king_square, board, board->turn, pin_ray_buffer);
+    const int king_square = bb_get_lsb(king) - 1;
+    const uint64_t king_moves = get_legal_king_moves(board, king_square);
+    if (king_moves != 0){
+        return 1;
+    }
 
-//     const uint64_t king_moves = get_king_moves(board, king_square, friendly_pieces);
-//     if (king_moves != 0){
-//         return 1;
-//     }
+    int en_passant_checker = 0;
+    uint64_t non_king_moves_in_check = board->in_check == 1 ? get_legal_non_king_moves_in_check(board, board->turn, king_square, &en_passant_checker) : UINT64_MAX;
+    if (non_king_moves_in_check == 0){
+        return 0;
+    }
 
-//     int en_passant_checker = 0;
-//     uint64_t non_king_moves_in_check = board->in_check == 1 ? get_legal_non_king_moves_in_check(board, board->turn, king_square, &en_passant_checker) : UINT64_MAX;
-//     if (non_king_moves_in_check == 0){
-//         return 0;
-//     }
+    uint64_t pin_ray_buffer[64];
+    get_pin_rays(king_square, board, board->turn, pin_ray_buffer);
 
-//     // knight
-//     while (knights != 0){
-//         const int square = bb_pop_lsb(&knights) - 1;
-//         const uint64_t moves = knight_attacks[square] & ~friendly_pieces & pin_ray_buffer[square] & non_king_moves_in_check;
-//         if (moves != 0){
-//             return 1;
-//         }
-//     }
+    // knight
+    while (knights != 0){
+        const int square = bb_pop_lsb(&knights) - 1;
+        const uint64_t moves = knight_attacks[square] & ~friendly_pieces & pin_ray_buffer[square] & non_king_moves_in_check;
+        if (moves != 0){
+            return 1;
+        }
+    }
 
-//     // rook
-//     while (rooks != 0){
-//         const int square = bb_pop_lsb(&rooks) - 1;
-//         const uint64_t moves = get_rook_attacks(board, square) & ~friendly_pieces & pin_ray_buffer[square] & non_king_moves_in_check;
-//         if (moves != 0){
-//             return 1;
-//         }
-//     }
+    // rook
+    while (rooks != 0){
+        const int square = bb_pop_lsb(&rooks) - 1;
+        const uint64_t moves = get_semi_legal_rook_moves(board, square) & ~friendly_pieces & pin_ray_buffer[square] & non_king_moves_in_check;
+        if (moves != 0){
+            return 1;
+        }
+    }
 
-//     // bishop
-//     while (bishops != 0){
-//         const int square = bb_pop_lsb(&bishops) - 1;
-//         const uint64_t moves = get_bishop_attacks(board, square) & ~friendly_pieces & pin_ray_buffer[square] & non_king_moves_in_check;
-//         if (moves != 0){
-//             return 1;
-//         }
-//     }
+    // bishop
+    while (bishops != 0){
+        const int square = bb_pop_lsb(&bishops) - 1;
+        const uint64_t moves = get_semi_legal_bishop_moves(board, square) & ~friendly_pieces & pin_ray_buffer[square] & non_king_moves_in_check;
+        if (moves != 0){
+            return 1;
+        }
+    }
 
-//     // queen
-//     while (queens != 0){
-//         const int square = bb_pop_lsb(&queens) - 1;
-//         const uint64_t orthogonal_moves = get_rook_attacks(board, square);
-//         const uint64_t diagonal_moves = get_bishop_attacks(board, square);
-//         const uint64_t moves = (diagonal_moves | orthogonal_moves) & ~friendly_pieces & pin_ray_buffer[square] & non_king_moves_in_check;
-//         if (moves != 0){
-//             return 1;
-//         }
-//     }
+    // queen
+    while (queens != 0){
+        const int square = bb_pop_lsb(&queens) - 1;
+        const uint64_t orthogonal_moves = get_semi_legal_rook_moves(board, square);
+        const uint64_t diagonal_moves = get_semi_legal_bishop_moves(board, square);
+        const uint64_t moves = (diagonal_moves | orthogonal_moves) & ~friendly_pieces & pin_ray_buffer[square] & non_king_moves_in_check;
+        if (moves != 0){
+            return 1;
+        }
+    }
 
-//     // pawn
-//     uint64_t enemy_pieces = board->board ^ friendly_pieces;
-//     uint64_t en_passant_mask = board->en_passant_square == 0 ? 0 : 1UL << board->en_passant_square;
-//     if (en_passant_checker == 1){
-//         non_king_moves_in_check |= (1UL << board->en_passant_square);
-//     }
-//     while (pawns != 0){
-//         int square = bb_pop_lsb(&pawns) - 1;
-//         uint64_t forward = board->turn == WHITE ? 1UL << (square + 8) : 1UL << (square - 8);
-//         uint64_t attack_mask = pawn_attacks[board->turn][square] & ~friendly_pieces & (enemy_pieces | en_passant_mask);
-//         uint64_t movement_mask = (board->board & forward) != 0 ? 0 : pawn_moves[board->turn][square] & ~board->board;
-//         uint64_t moves = (attack_mask | movement_mask) & pin_ray_buffer[square] & non_king_moves_in_check;
-//         if (moves != 0){
-//             return 1;
-//         }
-//     }
+    // pawn
+    if (en_passant_checker == 1){
+        non_king_moves_in_check |= (1UL << board->en_passant_square);
+    }
+    while (pawns != 0){
+        const int square = bb_pop_lsb(&pawns) - 1;
+        const uint64_t moves = get_semi_legal_pawn_moves(board, square) & pin_ray_buffer[square] & non_king_moves_in_check;
+        if (moves != 0){
+            return 1;
+        }
+    }
 
-//     return 0;
-// }
+    return 0;
+}
