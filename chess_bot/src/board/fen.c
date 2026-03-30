@@ -135,9 +135,6 @@ void cb_fen_to_board(_board *board, char *fen){
     int king_square = bb_get_lsb(board->turn == WHITE ? board->bitboards[W_KING] : board->bitboards[B_KING]) - 1;
     board->in_check = cb_is_square_attacked(king_square, board, board->board, board->turn) == 1;
 
-    // moves
-    mv_generate_moves(board, board->move_pool, &(board->move_count));
-
     // zobrist hash and history
     board->zobrist_hash = cb_hash_board(board);
     tt_clear_items(board->history);
@@ -146,7 +143,7 @@ void cb_fen_to_board(_board *board, char *fen){
 
     // game state
     board->game_state = ONGOING;
-    cb_calculate_game_state(board);
+    cb_calculate_game_state(board, mv_has_moves(board));
 }
 
 void cb_board_to_fen(_board *board, char *buffer){

@@ -4,6 +4,7 @@
 
 #include "chess_engine/search.h"
 #include "chess_engine/board.h"
+#include "chess_engine/moves.h"
 #include "chess_engine/evaluate.h"
 #include "chess_engine/transposition_table.h"
 #include "utils/error_handling.h"
@@ -14,9 +15,12 @@ static int quiescence_search(_board *board, int alpha, int beta){
         return best_score;
     }
 
+    _move moves[MAX_MOVES];
+    int move_count;
+    mv_generate_moves(board, moves, &move_count);
     int score = best_score;
-    for (int i = 0; i < board->move_count; i++){
-        _move move = board->move_pool[i];
+    for (int i = 0; i < move_count; i++){
+        _move move = moves[i];
         if (move.capture == NONE && move.special_move != PROMOTION){
             continue;
         }
@@ -55,10 +59,13 @@ static int search(_board *board, int depth, int alpha, int beta, _transposition_
         }
     }
 
+    _move moves[MAX_MOVES];
+    int move_count;
+    mv_generate_moves(board, moves, &move_count);
     int best_score = INT_MIN + 1;
-    _move best_move = board->move_pool[0];
-    for (int i = 0; i < board->move_count; i++){
-        _move move = board->move_pool[i];
+    _move best_move = moves[0];
+    for (int i = 0; i < move_count; i++){
+        _move move = moves[i];
         cb_make_move(board, move);
         int score = -search(board, depth - 1, -beta, -alpha, transposition_table);
         cb_undo_move(board);

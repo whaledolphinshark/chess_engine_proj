@@ -12,6 +12,19 @@
 #include "utils/bitboard_util.h"
 #include "chess_engine/transposition_table.h"
 
+int validate_board_move(_board *board, _move move){
+    _move moves[MAX_MOVES];
+    int move_count;
+    mv_generate_moves(board, moves, &move_count);
+    for (int i = 0; i < move_count; i++){
+        if (mv_moves_equal(moves[i], move)){
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
 void print_game_state(_board *board){
     char fen[MAX_FEN_LENGTH];
 
@@ -53,13 +66,7 @@ void undo_move_on_board(_board *board, int num_moves){
 
 void make_move_on_board(_board *board, char *input){
     _move move = mv_uci_to_move(input, board);
-    int valid = 0;
-    for (int i = 0; i < board->move_count; i++){
-        if (mv_moves_equal(board->move_pool[i], move)){
-            valid = 1;
-        }
-    }
-    if (board->game_state == ONGOING && valid == 1){
+    if (board->game_state == ONGOING && validate_board_move(board, move) == 1){
         cb_make_move(board, move);
         print_game_state(board);
     }

@@ -147,11 +147,13 @@ void mv_print_move(_move move, int new_line){
 }
 
 void mv_print_moves(_board *board){
-    int length = board->move_count;
-    printf("number of moves: %d\n", length);
-    for (int i = 0; i < length; i++){
-        mv_print_move(board->move_pool[i], 0);
-        if (i != length - 1){
+    _move moves[MAX_MOVES];
+    int move_count;
+    mv_generate_moves(board, moves, &move_count);
+    printf("number of moves: %d\n", move_count);
+    for (int i = 0; i < move_count; i++){
+        mv_print_move(moves[i], 0);
+        if (i != move_count - 1){
             printf(", ");
         }
         else{

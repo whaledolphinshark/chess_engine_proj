@@ -10,13 +10,13 @@
 #include "utils/bitboard_util.h"
 #include "utils/error_handling.h"
 
-void inline cb_calculate_game_state(_board *board){
+void cb_calculate_game_state(_board *board, int has_moves){
     // checkmate, stalemate, 50 move rule
-    if (board->in_check == 1 && board->move_count == 0){
+    if (board->in_check == 1 && has_moves == 0){
         board->game_state = board->turn == WHITE ? B_WIN : W_WIN;
         return;
     }
-    else if ((board->in_check == 0 && board->move_count == 0) || board->halfmove_clock >= 100){
+    else if ((board->in_check == 0 && has_moves == 0) || board->halfmove_clock >= 100){
         board->game_state = DRAW;
         return;
     }
@@ -113,7 +113,7 @@ _board *cb_create_board(){
     
     board->previous_moves = (_list *)gl_create_list(sizeof(_move_state));
 
-    mv_generate_moves(board, board->move_pool, &(board->move_count));
+    // mv_generate_moves(board, board->move_pool, &(board->move_count));
 
     return board;
 }
@@ -257,8 +257,6 @@ void cb_make_move(_board *board, _move move){
     // handle checks
     board->in_check = cb_is_square_attacked(bb_get_lsb(potential_king_in_check) - 1, board, board->board, board->turn);
 
-    mv_generate_moves(board, board->move_pool, &(board->move_count));
-
     // update history
     if (tt_is_key_in_table(board->history, board->zobrist_hash) == 1){
         int *num = (int *)tt_get_item(board->history, board->zobrist_hash);
@@ -272,10 +270,7 @@ void cb_make_move(_board *board, _move move){
     // add move to previous moves
     gl_append_item(board->previous_moves, &move_state);
 
-    cb_calculate_game_state(board);
-    if (board->game_state != ONGOING){
-        board->move_count = 0;
-    }
+    cb_calculate_game_state(board, mv_has_moves(board));
 }
 
 void cb_undo_move(_board *board){
@@ -361,8 +356,6 @@ void cb_undo_move(_board *board){
     board->black_pieces = board->bitboards[B_KING] | board->bitboards[B_PAWN] | board->bitboards[B_ROOK] | board->bitboards[B_BISHOP] | board->bitboards[B_KNIGHT] | board->bitboards[B_QUEEN];
     board->board = board->white_pieces | board->black_pieces;
 
-    mv_generate_moves(board, board->move_pool, &(board->move_count));
-
     gl_remove_item(board->previous_moves, prev_moves_count - 1);
 }
 
@@ -377,7 +370,7 @@ void cb_print_board(_board *board){
     printf("\n\n");
 }
 
-int cb_is_square_attacked(int square, _board *board, uint64_t occupied, _color side){
+int cb_is_square_attacked(const int square, _board *restrict board, const uint64_t occupied, const _color side){
     // 0 = pawns, 1 = knights, 3 = king
     uint64_t non_sliders[3];
     // 0 = diagonal, 1 = orthogonal
@@ -431,7 +424,7 @@ int cb_is_square_attacked(int square, _board *board, uint64_t occupied, _color s
     return 0;
 }
 
-uint64_t cb_hash_board(_board *board){
+uint64_t cb_hash_board(_board *restrict board){
     if (is_chess_engine_ready() != 1){
         eh_die("cb_init_chess_board() not called");
     }

@@ -14,8 +14,11 @@
 #define DEPTH 5
 
 int validate_board_move(_board *board, _move move){
-    for (int i = 0; i < board->move_count; i++){
-        if (mv_moves_equal(board->move_pool[i], move)){
+    _move moves[MAX_MOVES];
+    int move_count;
+    mv_generate_moves(board, moves, &move_count);
+    for (int i = 0; i < move_count; i++){
+        if (mv_moves_equal(moves[i], move)){
             return 1;
         }
     }

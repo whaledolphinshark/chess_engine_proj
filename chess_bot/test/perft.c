@@ -4,13 +4,17 @@
 #include "chess_engine/chess_types.h"
 #include "chess_engine/board.h"
 #include "chess_engine/init_chess_engine.h"
+#include "chess_engine/moves.h"
 
 void perft(_board *board, int ply, int collect_stats, int stats[5]){
+    _move moves[MAX_MOVES];
+    int move_count;
+    mv_generate_moves(board, moves, &move_count);
     if (ply <= 1){
-        stats[0] += board->move_count;
+        stats[0] += move_count;
         if (collect_stats == 1){
-            for (int i = 0; i < board->move_count; i++){
-                _move move = board->move_pool[i];
+            for (int i = 0; i < move_count; i++){
+                _move move = moves[i];
                 if (move.capture != NONE){
                     stats[1]++;
                 }
@@ -34,8 +38,8 @@ void perft(_board *board, int ply, int collect_stats, int stats[5]){
         return;
     }
 
-    for (int i = 0; i < board->move_count; i++){
-        cb_make_move(board, board->move_pool[i]);
+    for (int i = 0; i < move_count; i++){
+        cb_make_move(board, moves[i]);
         perft(board, ply - 1, collect_stats, stats);
         cb_undo_move(board);
     }

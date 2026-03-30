@@ -82,8 +82,6 @@ typedef struct _board{
     int in_check;
     _game_state game_state;
     uint64_t zobrist_hash;
-    _move move_pool[MAX_MOVES];
-    int move_count;
     _transposition_table *history;
     _list *previous_moves;
 }_board;

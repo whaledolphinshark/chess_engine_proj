@@ -30,19 +30,20 @@ int ev_evaluate(_board *board){
         }
     }
 
-    for (int i = 0; i < board->move_count; i++){
-        _move move = board->move_pool[i];
+    _move moves[MAX_MOVES];
+    int move_count;
+    mv_generate_moves(board, moves, &move_count);
+    for (int i = 0; i < move_count; i++){
+        _move move = moves[i];
         score += mobility_values[move.piece];
         if (move.capture != NONE){
             score++;
         }
     }
     
-    _move enemy_moves[MAX_MOVES];
-    int move_count = 0;
-    mv_generate_enemy_moves(board, enemy_moves, &move_count);
+    mv_generate_enemy_moves(board, moves, &move_count);
     for (int i = 0; i < move_count; i++){
-        _move move = enemy_moves[i];
+        _move move = moves[i];
         score -= mobility_values[move.piece];
         if (move.capture != NONE){
             score--;
