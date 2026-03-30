@@ -4,6 +4,7 @@
 #include "chess_engine/board.h"
 #include "moves_internal.h"
 #include "utils/bitboard_util.h"
+#include "utils/error_handling.h"
 
 #include <stdio.h>
 
@@ -286,6 +287,9 @@ static uint64_t get_legal_king_moves(_board *restrict board, const int king_squa
 }
 
 void mv_generate_moves(_board *restrict board, _move move_buffer[restrict MAX_MOVES], int *restrict move_count){
+    if (board == NULL){
+        eh_die("passed in null pointer");
+    }
     *move_count = 0;
 
     uint64_t pawns, rooks, knights, bishops, queens, king;
