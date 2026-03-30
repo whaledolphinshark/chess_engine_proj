@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <bits/getopt_core.h>
+#include <time.h>
 
 #include "chess_engine/chess_types.h"
 #include "chess_engine/init_chess_engine.h"
@@ -11,7 +13,7 @@
 #include "chess_engine/moves.h"
 #include "chess_engine/transposition_table.h"
 
-#define DEPTH 5
+#define ERROR_MSG "Usage: test_match [-s] [-d]\n-s: which color the bot play, 0 for white, 1 for black\n-d: depth the bot should search to\n"
 
 int validate_board_move(_board *board, _move move){
     _move moves[MAX_MOVES];
@@ -84,15 +86,15 @@ int player_move(_board *board, char *input){
     return 0;
 }
 
-int bot_move(_board *board, _transposition_table *transposition_table){
+int bot_move(_board *board, _transposition_table *transposition_table, int depth){
     clock_t start = clock();
-    _move move = se_search(board, DEPTH, DEFAULT_ALPHA, DEFAULT_BETA, transposition_table);
+    _move move = se_search(board, depth, DEFAULT_ALPHA, DEFAULT_BETA, transposition_table);
     clock_t end = clock();
     if (validate_board_move(board, move) == 1){
         cb_make_move(board, move);
         printf("bot played: ");
         mv_print_move(move, 0);
-        printf(", time taken: %f seconds, depth: %d\n", ((double) (end - start)) / CLOCKS_PER_SEC, DEPTH);
+        printf(", time taken: %f seconds, depth: %d\n", ((double) (end - start)) / CLOCKS_PER_SEC, depth);
         print_game_state(board);
         return 1;
     }
@@ -100,26 +102,56 @@ int bot_move(_board *board, _transposition_table *transposition_table){
     return 0;
 }
 
-int main(int argc, char *argv[]){
-    _color side;
-    if (argc != 2){
-        fprintf(stderr, "Usage: test_match side\nside: which color the bot plays as, 0 for white, 1 for black\n");
-        return 1;
+void read_args(int argc, char *argv[], char **arg_s, char **arg_d){
+    int opt;
+    while ((opt = getopt(argc, argv, "s:d:")) != -1){
+        switch (opt){
+            case 's':
+                *arg_s = optarg;
+                break;
+            case 'd':
+                *arg_d = optarg;
+                break;
+            case '?':
+            default:
+                fprintf(stderr, "Error: unexpected argument '%s'\n", argv[optind]);
+                fprintf(stderr, ERROR_MSG);
+                exit(EXIT_FAILURE);
+        }
     }
-    else{
-        char *endptr;
-        int arg1 = strtol(argv[1], &endptr, 10);
-        if (*endptr != '\0' || (arg1 != 0 && arg1 != 1)){
-            fprintf(stderr, "Usage: test_match side\nside: which color the bot plays as, 0 for white, 1 for black\n");
-            return 1;
-        }
+    if (optind < argc) {
+        fprintf(stderr, "Error: unexpected argument '%s'\n", argv[optind]);
+        fprintf(stderr, ERROR_MSG);
+        exit(EXIT_FAILURE);
+    }
+}
 
-        if (arg1 == 0){
-            side = WHITE;
+int main(int argc, char *argv[]){
+    _color side = BLACK;
+    int depth = 5;
+    char *arg_s = NULL;
+    char *arg_d = NULL;
+    read_args(argc, argv, &arg_s, &arg_d);
+    if (arg_s != NULL){
+        char *end_ptr;
+        unsigned long s = strtoul(arg_s, &end_ptr, 10);
+        if (*end_ptr != '\0' || *arg_s == '-' || (s != 0 && s != 1)){
+            fprintf(stderr, "Error: invalid argument '%s'\n", arg_s);
+            fprintf(stderr, ERROR_MSG);
+            exit(EXIT_FAILURE);
         }
-        else if(arg1 == 1){
-            side = BLACK;
+        printf("debug %lu\n", s);
+        side = s == 0 ? WHITE : BLACK;
+    }
+    if (arg_d != NULL){
+        char *end_ptr;
+        unsigned long d = strtoul(arg_d, &end_ptr, 10);
+        if (*end_ptr != '\0' || *arg_d == '-' || d == 0){
+            fprintf(stderr, "Error: invalid argument '%s'\n", arg_d);
+            fprintf(stderr, ERROR_MSG);
+            exit(EXIT_FAILURE);
         }
+        depth = d;
     }
 
     init_chess_engine();
@@ -129,7 +161,7 @@ int main(int argc, char *argv[]){
     print_game_state(board);
 
     if (side == WHITE){
-        bot_move(board, transposition_table);
+        bot_move(board, transposition_table, depth);
     }
 
     char input[MAX_MOVE_BUFFER_SIZE];
@@ -156,7 +188,7 @@ int main(int argc, char *argv[]){
             num_moves++;
         }
 
-        int success = bot_move(board, transposition_table);
+        int success = bot_move(board, transposition_table, depth);
         if (success == 0){
             fprintf(stderr, "error: invalid move played\n");
             cb_destroy_board(board);
