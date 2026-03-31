@@ -112,13 +112,12 @@ static int search(_board *board, int depth, int alpha, int beta, _transposition_
         if (score > best_score){
             best_score = score;
             best_move = move;
+            if (score >= beta){
+                break;
+            }
             if (score > alpha){
                 alpha = score;
             }
-        }
-        // maybe i can somehow put this in the first if condition?
-        if (best_score >= beta){
-            break;
         }
     }
 
@@ -138,7 +137,9 @@ _move se_search(_board *board, int depth, int alpha, int beta, _transposition_ta
         eh_die("passed in invalid transposition table");
     }
 
-    search(board, depth, alpha, beta, transposition_table);
+    for (int i = 1; i <= depth; i++){
+        search(board, i, alpha, beta, transposition_table);
+    }
 
     return ((_tt_search_entry *)tt_get_item(transposition_table, board->zobrist_hash))->best_move;
 }
