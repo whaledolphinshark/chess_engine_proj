@@ -1,12 +1,13 @@
 #include <limits.h>
 
 #include "chess_engine/evaluate.h"
+#include "evaluate_internal.h"
 #include "chess_engine/moves.h"
 #include "utils/bitboard_util.h"
 
-const int white_piece_values[12] = {10000, 100, 500, 300, 300, 900, -10000, -100, -500, -300, -300, -900};
-const int black_piece_values[12] = {-10000, -100, -500, -300, -300, -900, 10000, 100, 500, 300, 300, 900};
-const int mobility_values[12] = {0, 0, 15, 15, 15, 0, 0, 0, 15, 15, 15, 0};
+// const int white_piece_values[12] = {10000, 100, 500, 300, 300, 900, -10000, -100, -500, -300, -300, -900};
+// const int black_piece_values[12] = {-10000, -100, -500, -300, -300, -900, 10000, 100, 500, 300, 300, 900};
+// const int mobility_values[12] = {0, 0, 15, 15, 15, 0, 0, 0, 15, 15, 15, 0};
 
 int ev_evaluate(_board *board){
     if (board->game_state == DRAW){
