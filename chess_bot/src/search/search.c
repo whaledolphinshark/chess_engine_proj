@@ -1,6 +1,5 @@
 #include <limits.h>
 #include <stdlib.h>
-#include <stdio.h>
 
 #include "chess_engine/search.h"
 #include "chess_engine/board.h"
@@ -118,9 +117,8 @@ static int search(_board *board, int depth, int alpha, int beta, _transposition_
             }
         }
         // maybe i can somehow put this in the first if condition?
-        if (score >= beta){
-            // maybe update transposition table?
-            return best_score;
+        if (best_score >= beta){
+            break;
         }
     }
 

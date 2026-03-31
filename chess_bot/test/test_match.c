@@ -156,7 +156,7 @@ int main(int argc, char *argv[]){
     init_chess_engine();
     _transposition_table *transposition_table = tt_create_transposition_table(sizeof(_tt_search_entry));
     _board *board = cb_create_board();
-    cb_fen_to_board(board, "6nr/R3p2k/4Npp1/2p4p/6b1/2B2N2/2P1QP2/4K1R1 w - - 0 28");
+    cb_fen_to_board(board, START_FEN);
     print_game_state(board);
 
     if (side == WHITE){
