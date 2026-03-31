@@ -26,6 +26,9 @@ static void order_moves(_board *restrict board, _move moves[restrict MAX_MOVES],
         if (move.capture != NONE){
             values[i] += piece_values[move.capture] - piece_values[move.piece] + 10000;
         }
+        if (move.special_move == PROMOTION){
+            values[i] += 5000;
+        }
     }
 
     int temp_val;

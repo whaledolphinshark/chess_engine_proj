@@ -49,14 +49,13 @@ void print_game_state(_board *board){
                 printf("in check\n");
             }
             mv_print_moves(board);
+            if (board->turn == WHITE){
+                printf("white to move\n");
+            }
+            else{
+                printf("black to move\n");
+            }
             break;
-    }
-
-    if (board->turn == WHITE){
-        printf("white to move\n");
-    }
-    else{
-        printf("black to move\n");
     }
 
     printf("\n");
@@ -67,6 +66,7 @@ int undo_board_move(_board *board, int num_moves){
         return 0;
     }
 
+    cb_undo_move(board);
     cb_undo_move(board);
     print_game_state(board);
 
@@ -140,7 +140,6 @@ int main(int argc, char *argv[]){
             fprintf(stderr, ERROR_MSG);
             exit(EXIT_FAILURE);
         }
-        printf("debug %lu\n", s);
         side = s == 0 ? WHITE : BLACK;
     }
     if (arg_d != NULL){
@@ -157,7 +156,7 @@ int main(int argc, char *argv[]){
     init_chess_engine();
     _transposition_table *transposition_table = tt_create_transposition_table(sizeof(_tt_search_entry));
     _board *board = cb_create_board();
-    cb_fen_to_board(board, START_FEN);
+    cb_fen_to_board(board, "6nr/R3p2k/4Npp1/2p4p/6b1/2B2N2/2P1QP2/4K1R1 w - - 0 28");
     print_game_state(board);
 
     if (side == WHITE){
