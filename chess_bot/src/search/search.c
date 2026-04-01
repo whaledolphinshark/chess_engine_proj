@@ -1,5 +1,6 @@
 #include <limits.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 #include "chess_engine/search.h"
 #include "chess_engine/board.h"
@@ -51,6 +52,9 @@ static int quiescence_search(_board *board, int alpha, int beta){
     if (board->game_state != ONGOING || best_score >= beta){
         return best_score;
     }
+    if (best_score > alpha){
+        alpha = best_score;
+    }
 
     _move moves[MAX_MOVES];
     int move_count;
@@ -69,13 +73,12 @@ static int quiescence_search(_board *board, int alpha, int beta){
 
         if (score > best_score){
             best_score = score;
+            if (score >= beta){
+                break;
+            }
             if (score > alpha){
                 alpha = score;
             }
-        }
-
-        if (alpha >= beta){
-            break;
         }
     }
 
@@ -92,37 +95,49 @@ static int search(_board *board, int depth, int alpha, int beta, _transposition_
 
     if (tt_is_key_in_table(transposition_table, board->zobrist_hash) == 1){
         _tt_search_entry *entry = (_tt_search_entry *)tt_get_item(transposition_table, board->zobrist_hash);
-        if (entry->depth >= depth){
+        if (entry->depth >= depth && (entry->flag == EXACT || (entry->flag == LOWER_BOUND && entry->eval >= beta) || (entry->flag == UPPER_BOUND && entry->eval <= alpha))){
             return entry->eval;
         }
     }
-
+    
     _move moves[MAX_MOVES];
     int move_count;
     mv_generate_moves(board, moves, &move_count);
     order_moves(board, moves, move_count, transposition_table);
     int best_score = INT_MIN + 1;
     _move best_move = moves[0];
+    _tt_flag flag = UPPER_BOUND;
     for (int i = 0; i < move_count; i++){
         _move move = moves[i];
         cb_make_move(board, move);
-        int score = -search(board, depth - 1, -beta, -alpha, transposition_table);
+        int score;
+        if (i == 0 || beta - alpha == 1){
+            score = -search(board, depth - 1, -beta, -alpha, transposition_table);
+        }
+        else{
+            score = -search(board, depth - 1, -alpha - 1, -alpha, transposition_table);
+            if (score > alpha){
+                score = -search(board, depth - 1, -beta, -alpha, transposition_table);
+            }
+        }
         cb_undo_move(board);
 
         if (score > best_score){
             best_score = score;
             best_move = move;
             if (score >= beta){
+                flag = LOWER_BOUND;
                 break;
             }
             if (score > alpha){
+                flag = EXACT;
                 alpha = score;
             }
         }
     }
 
     if (tt_is_key_in_table(transposition_table, board->zobrist_hash) == 0 || ((_tt_search_entry *)tt_get_item(transposition_table, board->zobrist_hash))->depth < depth){
-        _tt_search_entry entry = {best_score, depth, best_move};
+        _tt_search_entry entry = {best_score, depth, best_move, flag};
         tt_insert_item(transposition_table, board->zobrist_hash, &entry);
     }
 

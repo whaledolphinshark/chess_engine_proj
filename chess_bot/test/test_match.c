@@ -66,7 +66,9 @@ int undo_board_move(_board *board, int num_moves){
         return 0;
     }
 
-    cb_undo_move(board);
+    if (board->game_state == ONGOING){
+        cb_undo_move(board);
+    }
     cb_undo_move(board);
     print_game_state(board);
 
