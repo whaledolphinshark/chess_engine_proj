@@ -22,7 +22,7 @@ void cb_calculate_game_state(_board *restrict board, const int has_moves){
     }
 
     // threefold repetition
-    if (tt_is_key_in_table(board->history, board->zobrist_hash) == 1){
+    if (tt_contains_key(board->history, board->zobrist_hash) == 1){
         if (*((int *)tt_get_item(board->history, board->zobrist_hash)) == 3){
             board->game_state = DRAW;
             return;
@@ -258,7 +258,7 @@ void cb_make_move(_board *restrict board, const _move move){
     board->in_check = cb_is_square_attacked(bb_get_lsb(potential_king_in_check) - 1, board, board->board, board->turn);
 
     // update history
-    if (tt_is_key_in_table(board->history, board->zobrist_hash) == 1){
+    if (tt_contains_key(board->history, board->zobrist_hash) == 1){
         int *num = (int *)tt_get_item(board->history, board->zobrist_hash);
         (*num)++;
     }

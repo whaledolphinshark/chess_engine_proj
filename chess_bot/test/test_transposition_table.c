@@ -157,7 +157,7 @@ int main(int argc, char *argv[]){
     }
     start = clock();
     for (int i = 0; i < num_items; i++){
-        checks[i] = tt_is_key_in_table(table, keys[i]);
+        checks[i] = tt_contains_key(table, keys[i]);
     }
     end = clock();
     printf("time to check %d entries: %f seconds\n", num_items, ((double) (end - start)) / CLOCKS_PER_SEC);

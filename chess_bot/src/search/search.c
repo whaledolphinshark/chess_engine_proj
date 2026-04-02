@@ -1,6 +1,5 @@
 #include <limits.h>
 #include <stdlib.h>
-#include <stdio.h>
 
 #include "chess_engine/search.h"
 #include "chess_engine/board.h"
@@ -12,7 +11,7 @@
 static void order_moves(_board *restrict board, _move moves[restrict MAX_MOVES], const int move_count, _transposition_table *restrict transposition_table){
     const uint64_t hash = board->zobrist_hash;
     _move best_move = {0, 0, NONE, NONE, NONE, NORMAL};
-    if (transposition_table != NULL && tt_is_key_in_table(transposition_table, hash) == 1){
+    if (transposition_table != NULL && tt_contains_key(transposition_table, hash) == 1){
         best_move = ((_tt_search_entry *)tt_get_item(transposition_table, hash))->best_move;
     }
     
@@ -93,7 +92,7 @@ static int search(_board *board, int depth, int alpha, int beta, _transposition_
         return quiescence_search(board, alpha, beta);
     }
 
-    if (tt_is_key_in_table(transposition_table, board->zobrist_hash) == 1){
+    if (tt_contains_key(transposition_table, board->zobrist_hash) == 1){
         _tt_search_entry *entry = (_tt_search_entry *)tt_get_item(transposition_table, board->zobrist_hash);
         if (entry->depth >= depth && (entry->flag == EXACT || (entry->flag == LOWER_BOUND && entry->eval >= beta) || (entry->flag == UPPER_BOUND && entry->eval <= alpha))){
             return entry->eval;
@@ -136,7 +135,7 @@ static int search(_board *board, int depth, int alpha, int beta, _transposition_
         }
     }
 
-    if (tt_is_key_in_table(transposition_table, board->zobrist_hash) == 0 || ((_tt_search_entry *)tt_get_item(transposition_table, board->zobrist_hash))->depth < depth){
+    if (tt_contains_key(transposition_table, board->zobrist_hash) == 0 || ((_tt_search_entry *)tt_get_item(transposition_table, board->zobrist_hash))->depth < depth){
         _tt_search_entry entry = {best_score, depth, best_move, flag};
         tt_insert_item(transposition_table, board->zobrist_hash, &entry);
     }

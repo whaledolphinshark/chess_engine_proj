@@ -226,7 +226,7 @@ int tt_delete_item(_transposition_table *hash_table, uint64_t zobrist_hash){
     return 0;
 }
 
-int tt_is_key_in_table(_transposition_table *hash_table, uint64_t zobrist_hash){
+int tt_contains_key(_transposition_table *hash_table, uint64_t zobrist_hash){
     if (hash_table == NULL){
         eh_die("passed in null pointers");
     }
