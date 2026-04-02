@@ -40,7 +40,10 @@ int ev_evaluate(_board *board){
                 white_score += knight_table[square];
                 break;
             case W_KING:
-                white_score += king_mid_table[square];
+                int num_pieces = bb_get_bits_set(board->board) - 2;
+                int endgame_value = king_end_table[square];
+                white_score += (king_mid_table[square] - endgame_value) * num_pieces / 30 + endgame_value;
+                // white_score += king_mid_table[square];
                 break;
             default:
                 break;
@@ -69,7 +72,10 @@ int ev_evaluate(_board *board){
                 black_score += knight_table[63 - square];
                 break;
             case B_KING:
-                black_score += king_mid_table[63 - square];
+                int num_pieces = bb_get_bits_set(board->board) - 2;
+                int endgame_value = king_end_table[63 - square];
+                black_score += (king_mid_table[63 - square] - endgame_value) * num_pieces / 30 + endgame_value;
+                // black_score += king_mid_table[63 - square];
                 break;
             default:
                 break;
