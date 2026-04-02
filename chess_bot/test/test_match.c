@@ -189,11 +189,13 @@ int main(int argc, char *argv[]){
             num_moves++;
         }
 
-        int success = bot_move(board, transposition_table, depth);
-        if (success == 0){
-            fprintf(stderr, "error: invalid move played\n");
-            cb_destroy_board(board);
-            return 1;
+        if (board->game_state == ONGOING){
+            int success = bot_move(board, transposition_table, depth);
+            if (success == 0){
+                fprintf(stderr, "error: invalid move played\n");
+                cb_destroy_board(board);
+                return 1;
+            }
         }
     }
 

@@ -3,6 +3,7 @@
 
 #include "chess_engine/evaluate.h"
 
+const int piece_phase_value[12] = {0, 0, 2, 1, 1, 4, 0, 0, 2, 1, 1, 4};
 const int piece_values[12] = {10000, 100, 500, 320, 330, 900, 10000, 100, 500, 320, 330, 900};
 const int white_piece_values[12] = {10000, 100, 500, 320, 330, 900, -10000, -100, -500, -320, -330, -900};
 const int black_piece_values[12] = {-10000, -100, -500, -320, -330, -900, 10000, 100, 500, 320, 330, 900};

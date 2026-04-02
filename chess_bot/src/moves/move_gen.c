@@ -368,6 +368,12 @@ void mv_generate_moves(_board *restrict board, _move move_buffer[restrict MAX_MO
     }
 }
 
+void mv_generate_semi_legal_moves(_board *restrict board, _move move_buffer[restrict MAX_MOVES], int *restrict move_count){
+    int temp = board->in_check;
+    mv_generate_moves(board, move_buffer, move_count);
+    board->in_check = temp;
+}
+
 void mv_generate_enemy_moves(_board *restrict board, _move move_buffer[restrict MAX_MOVES], int *restrict move_count){
     int temp_en_passant_square = board->en_passant_square;
     int temp_turn = board->turn;

@@ -37,6 +37,7 @@ extern uint64_t right_border;
 
 int mv_moves_equal(const _move left, const _move right);
 void mv_generate_moves(_board *restrict board, _move move_buffer[restrict MAX_MOVES], int *restrict move_count);
+void mv_generate_semi_legal_moves(_board *restrict board, _move move_buffer[restrict MAX_MOVES], int *restrict move_count);
 void mv_generate_enemy_moves(_board *restrict board, _move move_buffer[restrict MAX_MOVES], int *restrict move_count);
 int mv_has_moves(_board *restrict board);
 _move mv_uci_to_move(char *move_uci, _board *board);

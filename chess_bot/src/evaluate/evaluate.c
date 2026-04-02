@@ -17,11 +17,15 @@ int ev_evaluate(_board *board){
     int black_score = 0;
     uint64_t white_pieces = board->white_pieces;
     uint64_t black_pieces = board->black_pieces;
+    int phase_value = 0;
+    int black_king_square = 0;
+    int white_king_square = 0;
 
     while (white_pieces != 0){
         int square = bb_pop_lsb(&white_pieces) - 1;
         _piece piece = board->piece_array[square];
         white_score += white_piece_values[piece];
+        phase_value += piece_phase_value[piece];
         
         switch(piece){
             case W_PAWN:
@@ -40,10 +44,7 @@ int ev_evaluate(_board *board){
                 white_score += knight_table[square];
                 break;
             case W_KING:
-                int num_pieces = bb_get_bits_set(board->board) - 2;
-                int endgame_value = king_end_table[square];
-                white_score += (king_mid_table[square] - endgame_value) * num_pieces / 30 + endgame_value;
-                // white_score += king_mid_table[square];
+                white_king_square = square;
                 break;
             default:
                 break;
@@ -54,6 +55,7 @@ int ev_evaluate(_board *board){
         int square = bb_pop_lsb(&black_pieces) - 1;
         _piece piece = board->piece_array[square];
         black_score += black_piece_values[piece];
+        phase_value += piece_phase_value[piece];
         
         switch(piece){
             case B_PAWN:
@@ -72,20 +74,25 @@ int ev_evaluate(_board *board){
                 black_score += knight_table[63 - square];
                 break;
             case B_KING:
-                int num_pieces = bb_get_bits_set(board->board) - 2;
-                int endgame_value = king_end_table[63 - square];
-                black_score += (king_mid_table[63 - square] - endgame_value) * num_pieces / 30 + endgame_value;
-                // black_score += king_mid_table[63 - square];
+                black_king_square = square;
                 break;
             default:
                 break;
         }
     }
 
+    int endgame_value = king_end_table[white_king_square];
+    white_score += (king_mid_table[white_king_square] - endgame_value) * phase_value / TOTAL_PHASE_VALUE + endgame_value;
+    endgame_value = king_end_table[63 - black_king_square];
+    black_score += (king_mid_table[63 - black_king_square] - endgame_value) * phase_value / TOTAL_PHASE_VALUE + endgame_value;
+
     int score = board->turn == WHITE ? white_score - black_score : black_score - white_score;
+    if (board->in_check == 1){
+        score -= 30;
+    }
     _move moves[MAX_MOVES];
     int move_count;
-    mv_generate_moves(board, moves, &move_count);
+    mv_generate_semi_legal_moves(board, moves, &move_count);
     for (int i = 0; i < move_count; i++){
         _move move = moves[i];
         score += mobility_values[move.piece];

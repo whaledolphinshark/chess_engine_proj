@@ -3,6 +3,9 @@
 
 #include "chess_types.h"
 
+#define TOTAL_PHASE_VALUE 24
+
+extern const int piece_phase_value[12];
 extern const int piece_values[12];
 extern const int white_piece_values[12];
 extern const int black_piece_values[12];
