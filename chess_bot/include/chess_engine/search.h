@@ -19,6 +19,13 @@ typedef struct _tt_search_entry{
     _tt_flag flag;
 } _tt_search_entry;
 
+typedef struct _search_stats{
+    int eval;
+    int researches;
+    int nodes_visited;
+} _search_stats;
+
 _move se_search(_board *board, int depth, int alpha, int beta, _transposition_table *tt_table);
+_move se_search_stats(_board *board, int depth, int alpha, int beta, _transposition_table *tt_table, _search_stats *stats);
 
 #endif
