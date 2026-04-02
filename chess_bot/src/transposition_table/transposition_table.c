@@ -54,10 +54,10 @@ static int place_entry(_key_value_pair *buckets, _key_value_pair *entry, uint64_
 static void resize_table(_transposition_table *hash_table, int expand){
     uint64_t new_num_buckets;
     if (expand == 1){
-        new_num_buckets = hash_table->num_buckets * 2;
+        new_num_buckets = hash_table->num_buckets << 2;
     }
     else{
-        new_num_buckets = hash_table->num_buckets / 2;
+        new_num_buckets = hash_table->num_buckets >> 2;
     }
     _key_value_pair *new_buckets = malloc_buckets(new_num_buckets);
 
@@ -79,7 +79,7 @@ static void resize_table(_transposition_table *hash_table, int expand){
         bucket->value = first_entry->value;
         bucket->next = NULL;
         
-        int code = place_entry(new_buckets, bucket, bucket->hash % new_num_buckets);
+        int code = place_entry(new_buckets, bucket, bucket->hash & (new_num_buckets - 1));
         if (code == 1){
             free(bucket);
         }
@@ -89,7 +89,7 @@ static void resize_table(_transposition_table *hash_table, int expand){
             next = next->next;
             bucket->next = NULL;
 
-            int code = place_entry(new_buckets, bucket, bucket->hash % new_num_buckets);
+            int code = place_entry(new_buckets, bucket, bucket->hash & (new_num_buckets - 1));
             if (code == 1){
                 free(bucket);
             }
@@ -138,7 +138,7 @@ void tt_insert_item(_transposition_table *hash_table, uint64_t zobrist_hash, voi
     entry->next = NULL;
     entry->value = item_ptr;
 
-    int code = place_entry(hash_table->buckets, entry, entry->hash % hash_table->num_buckets);
+    int code = place_entry(hash_table->buckets, entry, entry->hash & (hash_table->num_buckets - 1));
     if (code == 1 || code == -1){
         free(entry);
     }
@@ -153,7 +153,7 @@ void *tt_get_item(_transposition_table *hash_table, uint64_t zobrist_hash){
         eh_die("passed in null pointers");
     }
 
-    uint64_t index = zobrist_hash % hash_table->num_buckets;
+    uint64_t index = zobrist_hash & (hash_table->num_buckets - 1);
     _key_value_pair *bucket = &(hash_table->buckets[index]);
     if (bucket->occupancy == EMPTY){
         eh_die("item not found");
@@ -178,7 +178,7 @@ int tt_delete_item(_transposition_table *hash_table, uint64_t zobrist_hash){
         eh_die("passed in null pointers");
     }
 
-    uint64_t index = zobrist_hash % hash_table->num_buckets;
+    uint64_t index = zobrist_hash & (hash_table->num_buckets - 1);
     _key_value_pair *bucket = &(hash_table->buckets[index]);
 
     if (bucket->occupancy == EMPTY){
@@ -231,7 +231,7 @@ int tt_is_key_in_table(_transposition_table *hash_table, uint64_t zobrist_hash){
         eh_die("passed in null pointers");
     }
     
-    uint64_t index = zobrist_hash % hash_table->num_buckets;
+    uint64_t index = zobrist_hash & (hash_table->num_buckets - 1);
     _key_value_pair *bucket = &(hash_table->buckets[index]);
     if (bucket->occupancy == EMPTY){
         return 0;
