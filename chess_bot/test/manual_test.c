@@ -80,7 +80,7 @@ int main(void){
     _board *board = cb_create_board();
 
     // display board
-    cb_fen_to_board(board, "7k/2p5/8/1P6/1K2n3/7r/8/q1r5 b - - 0 1");
+    cb_fen_to_board(board, "rnq3k1/pRp1p2p/6P1/3p4/3Q4/2P5/P1P2r2/2B1K2R w K - 0 15");
     print_game_state(board);
 
     char input[MAX_MOVE_BUFFER_SIZE];
