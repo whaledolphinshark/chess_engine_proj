@@ -113,8 +113,6 @@ _board *cb_create_board(){
     
     board->previous_moves = (_list *)gl_create_list(sizeof(_move_state));
 
-    // mv_generate_moves(board, board->move_pool, &(board->move_count));
-
     return board;
 }
 

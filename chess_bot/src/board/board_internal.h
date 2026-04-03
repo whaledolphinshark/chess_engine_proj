@@ -8,7 +8,7 @@ extern uint64_t black_turn_key;
 extern uint64_t castling_keys[16];
 extern uint64_t en_passant_keys[8];
 
-void cb_calculate_game_state(_board *board, int has_moves);
+void cb_calculate_game_state(_board *restrict board, const int has_moves);
 void cb_init_board();
 
 #endif

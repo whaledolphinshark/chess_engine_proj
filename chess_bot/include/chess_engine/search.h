@@ -23,9 +23,16 @@ typedef struct _search_stats{
     int eval;
     int researches;
     int nodes_visited;
+    int quiescent_nodes_visited;
 } _search_stats;
 
-_move se_search(_board *board, int depth, int alpha, int beta, _transposition_table *tt_table);
-_move se_search_stats(_board *board, int depth, int alpha, int beta, _transposition_table *tt_table, _search_stats *stats);
+typedef struct _search_context{
+    _transposition_table *table;
+    int history[12][64][64];
+} _search_context;
+
+_move se_search(_board *board, int depth, int alpha, int beta, _search_context *context, _search_stats *stats);
+void se_init_search_context(_search_context *context);
+void se_destroy_search_context(_search_context *context);
 
 #endif

@@ -65,7 +65,7 @@ static void order_moves(_board *restrict board, _move moves[restrict MAX_MOVES],
 }
 
 static int quiescence_search(_board *board, int alpha, int beta, _search_context *context, _search_stats *stats){
-    // stats->quiescent_nodes_visited++;
+    stats->quiescent_nodes_visited++;
     int best_score = ev_evaluate(board);
     if (board->game_state != ONGOING || best_score >= beta){
         return best_score;
