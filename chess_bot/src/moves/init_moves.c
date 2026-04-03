@@ -146,8 +146,19 @@ static void init_lookup_tables(){
 
         // pawns
         int rank = i / 8;
-        pawn_attacks[WHITE][i] = (5UL << i << 7) & (255UL << (8 * rank) << 8);
-        pawn_attacks[BLACK][i] = (5UL << i >> 9) & (255UL << (8 * rank) >> 8);
+        int file = i % 8;
+        uint64_t white_pawn_attack = 0UL;
+        uint64_t black_pawn_attack = 0UL;
+        if (rank + 1 < 8){
+            white_pawn_attack |= file - 1 >= 0 ? 1UL << i << 7 : 0;
+            white_pawn_attack |= file + 1 < 8 ? 1UL << i << 9 : 0;
+        }
+        if (rank - 1 >= 0){
+            black_pawn_attack |= file - 1 >= 0 ? 1UL << i >> 9 : 0;
+            black_pawn_attack |= file + 1 < 8 ? 1UL << i >> 7 : 0;
+        }
+        pawn_attacks[WHITE][i] = white_pawn_attack;
+        pawn_attacks[BLACK][i] = black_pawn_attack;
         pawn_moves[WHITE][i] = (1UL << i << 8) | (rank == 1 ? 1UL << i << 16 : 0);
         pawn_moves[BLACK][i] = (1UL << i >> 8) | (rank == 6 ? 1UL << i >> 16 : 0);
     }
