@@ -11,9 +11,8 @@
 
 #define MAX_HISTORY 65536
 
-static void update_history(const int depth, const int index, _move moves[restrict MAX_MOVES], _search_context *restrict context){
+static void update_history(const int bonus, const int index, _move moves[restrict MAX_MOVES], _search_context *restrict context){
     _move move = moves[index];
-    int bonus = depth * depth < MAX_HISTORY ? depth * depth : MAX_HISTORY;
     context->history[move.piece][move.from][move.to] += bonus - (context->history[move.piece][move.from][move.to] * bonus) / MAX_HISTORY;
     for (int j = 0; j < index; j++){
         _move temp = moves[j];
@@ -67,7 +66,7 @@ static void order_moves(_board *restrict board, _move moves[restrict MAX_MOVES],
 static int quiescence_search(_board *board, int alpha, int beta, _search_context *context, _search_stats *stats){
     stats->quiescent_nodes_visited++;
     int best_score = ev_evaluate(board);
-    if (board->game_state != ONGOING || best_score >= beta){
+    if (board->game_state != ONGOING || (board->in_check == 0 && best_score >= beta)){
         return best_score;
     }
     if (best_score > alpha){
@@ -147,7 +146,10 @@ static int search(_board *board, int depth, int alpha, int beta, _search_context
             best_move = move;
             if (score >= beta){
                 flag = LOWER_BOUND;
-                update_history(depth, i, moves, context);
+                if (move.capture == NONE){
+                    const int bonus = depth * depth < MAX_HISTORY ? depth * depth : MAX_HISTORY;
+                    update_history(bonus, i, moves, context);
+                }
                 break;
             }
             if (score > alpha){
@@ -178,6 +180,14 @@ _move se_search(_board *board, int depth, int alpha, int beta, _search_context *
 
     for (int i = 1; i <= depth; i++){
         search(board, i, alpha, beta, context, stats);
+    }
+
+    for (int i = 0; i < 12; i++){
+        for (int j = 0; j < 64; j++){
+            for (int k = 0; k < 64; k++){
+                context->history[i][j][k] /= 2;
+            }
+        }
     }
 
     _tt_search_entry *entry = (_tt_search_entry *)tt_get_item(context->table, board->zobrist_hash);
