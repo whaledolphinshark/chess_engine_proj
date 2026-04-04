@@ -22,6 +22,7 @@ typedef struct _tt_search_entry{
 typedef struct _search_stats{
     int eval;
     int researches;
+    int research_fail_low;
     int nodes_visited;
     int quiescent_nodes_visited;
 } _search_stats;

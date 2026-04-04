@@ -137,6 +137,9 @@ static int search(_board *board, int depth, int alpha, int beta, _search_context
             if (score > alpha){
                 stats->researches++;
                 score = -search(board, depth - 1, -beta, -alpha, context, stats);
+                if (score <= alpha){
+                    stats->research_fail_low++;
+                }
             }
         }
         cb_undo_move(board);

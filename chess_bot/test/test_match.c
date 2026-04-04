@@ -89,7 +89,7 @@ int player_move(_board *board, char *input){
 }
 
 int bot_move(_board *board, _search_context *context, int depth){
-    _search_stats stats = {0, 0, 0, 0};
+    _search_stats stats = {0, 0, 0, 0, 0};
     clock_t start = clock();
     _move move = se_search(board, depth, DEFAULT_ALPHA, DEFAULT_BETA, context, &stats);
     clock_t end = clock();
@@ -115,7 +115,7 @@ int bot_move(_board *board, _search_context *context, int depth){
         printf("bot played: ");
         mv_print_move(move, 0);
         printf(", time taken: %f seconds, depth: %d\n", ((double) (end - start)) / CLOCKS_PER_SEC, depth);
-        printf("re-searches: %d, evaluation: %d, nodes visited: %d, quiescent nodes visited: %d\n", stats.researches, stats.eval, stats.nodes_visited, stats.quiescent_nodes_visited);
+        printf("re-searches: %d, re-search fail lows: %d, evaluation: %d, nodes visited: %d, quiescent nodes visited: %d\n", stats.researches, stats.research_fail_low, stats.eval, stats.nodes_visited, stats.quiescent_nodes_visited);
         print_game_state(board);
         return 1;
     }
