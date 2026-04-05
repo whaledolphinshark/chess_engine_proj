@@ -177,7 +177,7 @@ static int search(_board *board, int depth, int alpha, int beta, int pv, _search
     return best_score;
 }
 
-_move se_search(_board *board, int depth, int alpha, int beta, _search_context *context, _search_stats *stats){
+_move se_search(_board *board, int depth, _search_context *context, _search_stats *stats){
     if (board == NULL || stats == NULL){
         eh_die("passed in null pointer");
     }
@@ -189,7 +189,7 @@ _move se_search(_board *board, int depth, int alpha, int beta, _search_context *
     }
 
     for (int i = 1; i <= depth; i++){
-        search(board, i, alpha, beta, 1, context, stats);
+        search(board, i, DEFAULT_ALPHA, DEFAULT_BETA, 1, context, stats);
     }
 
     for (int i = 0; i < 12; i++){

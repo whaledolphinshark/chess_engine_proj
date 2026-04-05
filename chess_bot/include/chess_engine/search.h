@@ -32,7 +32,7 @@ typedef struct _search_context{
     int history[12][64][64];
 } _search_context;
 
-_move se_search(_board *board, int depth, int alpha, int beta, _search_context *context, _search_stats *stats);
+_move se_search(_board *board, int depth, _search_context *context, _search_stats *stats);
 void se_init_search_context(_search_context *context);
 void se_destroy_search_context(_search_context *context);
 

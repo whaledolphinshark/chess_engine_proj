@@ -91,7 +91,7 @@ int player_move(_board *board, char *input){
 int bot_move(_board *board, _search_context *context, int depth){
     _search_stats stats = {0, 0, 0, 0, 0};
     clock_t start = clock();
-    _move move = se_search(board, depth, DEFAULT_ALPHA, DEFAULT_BETA, context, &stats);
+    _move move = se_search(board, depth, context, &stats);
     clock_t end = clock();
     int max = 0;
     int min = 0;
