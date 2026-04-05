@@ -94,22 +94,20 @@ int bot_move(_board *board, _search_context *context, int depth){
     _move move = se_search(board, depth, DEFAULT_ALPHA, DEFAULT_BETA, context, &stats);
     clock_t end = clock();
     int max = 0;
-    _piece piece = NONE;
-    int from = 0;
-    int to = 0;
+    int min = 0;
     for (int i = 0; i < 12; i++){
         for (int j = 0; j < 64; j++){
             for (int k = 0; k < 64; k++){
                 if (context->history[i][j][k] > max){
                     max = context->history[i][j][k];
-                    piece = i;
-                    from = j;
-                    to = k;
+                }
+                if (context->history[i][j][k] < min){
+                    min = context->history[i][j][k];
                 }
             }
         }
     }
-    printf("debug: %d %d %d %d\n", max, piece, from, to);
+    printf("debug: max: %d, min: %d\n", max, min);
     if (validate_board_move(board, move) == 1){
         cb_make_move(board, move);
         printf("bot played: ");

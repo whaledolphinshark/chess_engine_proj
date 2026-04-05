@@ -22,14 +22,14 @@ static void update_history(const int bonus, const int index, _move moves[restric
     }
 }
 
-static void order_moves(_board *restrict board, _move moves[restrict MAX_MOVES], const int move_count, _search_context *restrict context){
+static void order_moves(_board *restrict board, _move moves[restrict MAX_MOVES], int values[restrict MAX_MOVES], const int move_count, _search_context *restrict context){
     const uint64_t hash = board->zobrist_hash;
     _move best_move = {0, 0, NONE, NONE, NONE, NORMAL};
     if (tt_contains_key(context->table, hash) == 1){
         best_move = ((_tt_search_entry *)tt_get_item(context->table, hash))->best_move;
     }
     
-    int values[move_count];
+    // int values[move_count];
     for (int i = 0; i < move_count; i++){
         values[i] = 0;
         _move move = moves[i];
@@ -74,9 +74,10 @@ static int quiescence_search(_board *board, int alpha, int beta, _search_context
     }
 
     _move moves[MAX_MOVES];
+    int values[MAX_MOVES];
     int move_count;
     mv_generate_moves(board, moves, &move_count);
-    order_moves(board, moves, move_count, context);
+    order_moves(board, moves, values, move_count, context);
     int score = best_score;
     for (int i = 0; i < move_count; i++){
         _move move = moves[i];
@@ -102,12 +103,12 @@ static int quiescence_search(_board *board, int alpha, int beta, _search_context
     return best_score;
 }
 
-static int search(_board *board, int depth, int alpha, int beta, _search_context *context, _search_stats *stats){
+static int search(_board *board, int depth, int alpha, int beta, int pv, _search_context *context, _search_stats *stats){
     stats->nodes_visited++;
     if (board->game_state != ONGOING){
         return ev_evaluate(board);
     }
-    if (depth == 0){
+    if (depth <= 0){
         return quiescence_search(board, alpha, beta, context, stats);
     }
 
@@ -119,24 +120,30 @@ static int search(_board *board, int depth, int alpha, int beta, _search_context
     }
     
     _move moves[MAX_MOVES];
+    int values[MAX_MOVES];
     int move_count;
     mv_generate_moves(board, moves, &move_count);
-    order_moves(board, moves, move_count, context);
+    order_moves(board, moves, values, move_count, context);
     int best_score = INT_MIN + 1;
     _move best_move = moves[0];
     _tt_flag flag = UPPER_BOUND;
     for (int i = 0; i < move_count; i++){
-        _move move = moves[i];
-        cb_make_move(board, move);
         int score;
-        if (i == 0 || beta - alpha == 1){
-            score = -search(board, depth - 1, -beta, -alpha, context, stats);
+        _move move = moves[i];
+        int depth_reduction = 1;
+        if (depth > 2 && values[i] <= 0){
+            depth_reduction++;
+        }
+
+        cb_make_move(board, move);
+        if (i == 0 && pv == 1){
+            score = -search(board, depth - 1, -beta, -alpha, 1, context, stats);
         }
         else{
-            score = -search(board, depth - 1, -alpha - 1, -alpha, context, stats);
-            if (score > alpha){
+            score = -search(board, depth - depth_reduction, -alpha - 1, -alpha, 0, context, stats);
+            if (pv == 1 && score > alpha){
                 stats->researches++;
-                score = -search(board, depth - 1, -beta, -alpha, context, stats);
+                score = -search(board, depth - 1, -beta, -alpha, 1, context, stats);
                 if (score <= alpha){
                     stats->research_fail_low++;
                 }
@@ -182,7 +189,7 @@ _move se_search(_board *board, int depth, int alpha, int beta, _search_context *
     }
 
     for (int i = 1; i <= depth; i++){
-        search(board, i, alpha, beta, context, stats);
+        search(board, i, alpha, beta, 1, context, stats);
     }
 
     for (int i = 0; i < 12; i++){
