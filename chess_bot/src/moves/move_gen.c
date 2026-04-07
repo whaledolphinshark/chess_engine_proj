@@ -247,13 +247,13 @@ static void get_pin_rays(const int king_square, _board *restrict board, const _c
     }
 }
 
-static uint64_t get_semi_legal_rook_moves(_board *restrict board, const int square){
+uint64_t mv_get_semi_legal_rook_moves(_board *restrict board, const int square){
     const uint64_t blockers = rook_masks[square] & board->board;
     const uint64_t index = (blockers * rook_magics[square]) >> rook_shifts[square];
     return rook_attacks[square][index];
 }
 
-static uint64_t get_semi_legal_bishop_moves(_board *restrict board, const int square){
+uint64_t mv_get_semi_legal_bishop_moves(_board *restrict board, const int square){
     const uint64_t blockers = bishop_masks[square] & board->board;
     const uint64_t index = (blockers * bishop_magics[square]) >> bishop_shifts[square];
     return bishop_attacks[square][index];
@@ -330,22 +330,22 @@ void mv_generate_moves(_board *restrict board, _move move_buffer[restrict MAX_MO
     // rook
     while (rooks != 0){
         const int square = bb_pop_lsb(&rooks) - 1;
-        const uint64_t moves = get_semi_legal_rook_moves(board, square) & ~friendly_pieces & pin_ray_buffer[square] & non_king_moves_in_check;
+        const uint64_t moves = mv_get_semi_legal_rook_moves(board, square) & ~friendly_pieces & pin_ray_buffer[square] & non_king_moves_in_check;
         add_moves_to_buffer(board, move_buffer, move_count, square, moves);
     }
 
     // bishop
     while (bishops != 0){
         const int square = bb_pop_lsb(&bishops) - 1;
-        const uint64_t moves = get_semi_legal_bishop_moves(board, square) & ~friendly_pieces & pin_ray_buffer[square] & non_king_moves_in_check;
+        const uint64_t moves = mv_get_semi_legal_bishop_moves(board, square) & ~friendly_pieces & pin_ray_buffer[square] & non_king_moves_in_check;
         add_moves_to_buffer(board, move_buffer, move_count, square, moves);
     }
 
     // queen
     while (queens != 0){
         const int square = bb_pop_lsb(&queens) - 1;
-        const uint64_t orthogonal_moves = get_semi_legal_rook_moves(board, square);
-        const uint64_t diagonal_moves = get_semi_legal_bishop_moves(board, square);
+        const uint64_t orthogonal_moves = mv_get_semi_legal_rook_moves(board, square);
+        const uint64_t diagonal_moves = mv_get_semi_legal_bishop_moves(board, square);
         const uint64_t moves = (diagonal_moves | orthogonal_moves) & ~friendly_pieces & pin_ray_buffer[square] & non_king_moves_in_check;
         add_moves_to_buffer(board, move_buffer, move_count, square, moves);
     }
@@ -436,7 +436,7 @@ int mv_has_moves(_board *restrict board){
     // rook
     while (rooks != 0){
         const int square = bb_pop_lsb(&rooks) - 1;
-        const uint64_t moves = get_semi_legal_rook_moves(board, square) & ~friendly_pieces & pin_ray_buffer[square] & non_king_moves_in_check;
+        const uint64_t moves = mv_get_semi_legal_rook_moves(board, square) & ~friendly_pieces & pin_ray_buffer[square] & non_king_moves_in_check;
         if (moves != 0){
             return 1;
         }
@@ -445,7 +445,7 @@ int mv_has_moves(_board *restrict board){
     // bishop
     while (bishops != 0){
         const int square = bb_pop_lsb(&bishops) - 1;
-        const uint64_t moves = get_semi_legal_bishop_moves(board, square) & ~friendly_pieces & pin_ray_buffer[square] & non_king_moves_in_check;
+        const uint64_t moves = mv_get_semi_legal_bishop_moves(board, square) & ~friendly_pieces & pin_ray_buffer[square] & non_king_moves_in_check;
         if (moves != 0){
             return 1;
         }
@@ -454,8 +454,8 @@ int mv_has_moves(_board *restrict board){
     // queen
     while (queens != 0){
         const int square = bb_pop_lsb(&queens) - 1;
-        const uint64_t orthogonal_moves = get_semi_legal_rook_moves(board, square);
-        const uint64_t diagonal_moves = get_semi_legal_bishop_moves(board, square);
+        const uint64_t orthogonal_moves = mv_get_semi_legal_rook_moves(board, square);
+        const uint64_t diagonal_moves = mv_get_semi_legal_bishop_moves(board, square);
         const uint64_t moves = (diagonal_moves | orthogonal_moves) & ~friendly_pieces & pin_ray_buffer[square] & non_king_moves_in_check;
         if (moves != 0){
             return 1;

@@ -159,7 +159,7 @@ int main(int argc, char *argv[]){
             fprintf(stderr, ERROR_MSG);
             exit(EXIT_FAILURE);
         }
-        side = s == 0 ? WHITE : BLACK;
+        side = (s == 0 ? WHITE : BLACK);
     }
     if (arg_d != NULL){
         char *end_ptr;
@@ -179,7 +179,7 @@ int main(int argc, char *argv[]){
     cb_fen_to_board(board, START_FEN);
     print_game_state(board);
 
-    if (side == WHITE){
+    if (side == board->turn){
         bot_move(board, &context, depth);
     }
 
