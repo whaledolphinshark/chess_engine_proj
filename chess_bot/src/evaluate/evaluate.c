@@ -112,9 +112,6 @@ int ev_evaluate(_board *board){
     black_score += (king_mid_table[63 - black_king_square] - endgame_value) * phase_value / TOTAL_PHASE_VALUE + endgame_value;
 
     int score = board->turn == WHITE ? white_score - black_score : black_score - white_score;
-    if (board->in_check == 1){
-        score -= 30;
-    }
     _move moves[MAX_MOVES];
     int move_count;
     mv_generate_semi_legal_moves(board, moves, &move_count);
