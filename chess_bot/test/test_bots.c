@@ -11,19 +11,6 @@
 
 #define DEPTH 6
 
-int validate_board_move(_board *board, _move move){
-    _move moves[MAX_MOVES];
-    int move_count;
-    mv_generate_moves(board, moves, &move_count);
-    for (int i = 0; i < move_count; i++){
-        if (mv_moves_equal(moves[i], move)){
-            return 1;
-        }
-    }
-
-    return 0;
-}
-
 int main(){
     init_chess_engine();
     _search_context context_1;
@@ -31,7 +18,7 @@ int main(){
     _search_stats stats_1 = {0, 0, 0, 0, 0};
     _search_stats stats_2 = {0, 0, 0, 0, 0};
     _board *board = cb_create_board();
-    char *openings[3] = {START_FEN, 
+    char *openings[30] = {START_FEN, 
                             "r1bqkbnr/pppp1ppp/2n5/1B2p3/4P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 3 3", 
                             "rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w KQkq c6 0 2",
                             "rnbqkbnr/pppp1ppp/4p3/8/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2",
@@ -67,7 +54,7 @@ int main(){
     int alt_wins = 0;
     int draws = 0;
     int total_games = 0;
-    for (int i = 0; i < 3; i++){
+    for (int i = 0; i < 30; i++){
         for (int j = 0; j < 2; j++){
             total_games++;
             se_init_search_context(&context_1);
@@ -75,41 +62,48 @@ int main(){
             cb_fen_to_board(board, openings[i]);
             cb_board_to_fen(board, fen);
             printf("%s\n", fen);
+            _color original_side;
+            if ((board->turn == WHITE && j == 0) || (board->turn == BLACK && j == 1)){
+                original_side = WHITE;
+            }
+            else{
+                original_side = BLACK;
+            }
+
             while (board->game_state == ONGOING){
                 _move move;
-                if (board->turn == WHITE){
-                    move = (j == 0 ? se_search(board, DEPTH, &context_1, &stats_1) : alt_search(board, DEPTH, &context_2, &stats_2));
-                }
-                else{
-                    move = (j == 0 ? alt_search(board, DEPTH, &context_2, &stats_2) : se_search(board, DEPTH, &context_1, &stats_1));
-                }
-
-                if (validate_board_move(board, move)){
+                if (j == 0){
+                    move = se_search(board, DEPTH, &context_1, &stats_1);
                     cb_make_move(board, move);
+                    if (board->game_state == ONGOING){
+                        move = alt_search(board, DEPTH, &context_2, &stats_2);
+                        cb_make_move(board, move);
+                    }
+                    else{
+                        break;
+                    }
                 }
                 else{
-                    eh_die("invalid move");
+                    move = alt_search(board, DEPTH, &context_1, &stats_1);
+                    cb_make_move(board, move);
+                    if (board->game_state == ONGOING){
+                        move = se_search(board, DEPTH, &context_2, &stats_2);
+                        cb_make_move(board, move);
+                    }
+                    else{
+                        break;
+                    }
                 }
 
                 cb_board_to_fen(board, fen);
                 printf("%s\n", fen);
             }
 
-            if (board->game_state == W_WIN){
-                if (j == 0){
-                    original_wins++;
-                }
-                else{
-                    alt_wins++;
-                }
+            if ((board->game_state == W_WIN && original_side == WHITE) || (board->game_state == B_WIN && original_side == BLACK)){
+                original_wins++;
             }
-            else if (board->game_state == B_WIN){
-                if (j == 0){
-                    alt_wins++;
-                }
-                else{
-                    original_wins++;
-                }
+            else if (board->game_state != DRAW){
+                alt_wins++;
             }
             else{
                 draws++;
@@ -117,7 +111,7 @@ int main(){
             se_destroy_search_context(&context_1);
             se_destroy_search_context(&context_2);
 
-            printf("\nposition: %s, white: %s, total games: %d, original wins: %d, alt wins: %d, draws: %d\n\n", openings[i], j == 0 ? "original" : "alt", total_games, original_wins, alt_wins, draws);
+            printf("\nposition: %s, total games: %d, original wins: %d, alt wins: %d, draws: %d\n\n", openings[i], total_games, original_wins, alt_wins, draws);
         }
     }
 
