@@ -48,7 +48,7 @@ int main(){
                             "rnbqkbnr/pppppppp/8/8/5P2/8/PPPPP1PP/RNBQKBNR b KQkq f3 0 1",
                             "rnbqkbnr/pppppppp/8/8/8/5P2/PPPPP1PP/RNBQKBNR b KQkq - 0 1",
                             "rnbqkbnr/pppppppp/8/8/8/1P6/P1PPPPPP/RNBQKBNR b KQkq - 0 1"};
-    char fen[MAX_FEN_LENGTH];
+    // char fen[MAX_FEN_LENGTH];
 
     int original_wins = 0;
     int alt_wins = 0;
@@ -60,8 +60,8 @@ int main(){
             se_init_search_context(&context_1);
             se_init_search_context(&context_2);
             cb_fen_to_board(board, openings[i]);
-            cb_board_to_fen(board, fen);
-            printf("%s\n", fen);
+            // cb_board_to_fen(board, fen);
+            // printf("%s\n", fen);
             _color original_side;
             if ((board->turn == WHITE && j == 0) || (board->turn == BLACK && j == 1)){
                 original_side = WHITE;
@@ -69,7 +69,6 @@ int main(){
             else{
                 original_side = BLACK;
             }
-
             while (board->game_state == ONGOING){
                 _move move;
                 if (j == 0){
@@ -95,8 +94,8 @@ int main(){
                     }
                 }
 
-                cb_board_to_fen(board, fen);
-                printf("%s\n", fen);
+                // cb_board_to_fen(board, fen);
+                // printf("%s\n", fen);
             }
 
             if ((board->game_state == W_WIN && original_side == WHITE) || (board->game_state == B_WIN && original_side == BLACK)){
@@ -111,7 +110,10 @@ int main(){
             se_destroy_search_context(&context_1);
             se_destroy_search_context(&context_2);
 
-            printf("\nposition: %s, total games: %d, original wins: %d, alt wins: %d, draws: %d\n\n", openings[i], total_games, original_wins, alt_wins, draws);
+            printf("\nposition: %s, total games: %d, first mover: %s\n", openings[i], total_games, j == 0 ? "original" : "alt");
+            printf("original wins: %d, alt wins: %d, draws: %d\n", original_wins, alt_wins, draws);
+            printf("original stats---researches: %d, research fail-lows: %d, nodes visited: %d, quiescent nodes visited: %d\n", stats_1.researches, stats_1.research_fail_low, stats_1.nodes_visited, stats_1.quiescent_nodes_visited);
+            printf("alt stats---researches: %d, research fail-lows: %d, nodes visited: %d, quiescent nodes visited: %d\n\n", stats_2.researches, stats_2.research_fail_low, stats_2.nodes_visited, stats_2.quiescent_nodes_visited);
         }
     }
 
