@@ -7,6 +7,7 @@
 #include "chess_engine/moves.h"
 #include "chess_engine/transposition_table.h"
 #include "utils/error_handling.h"
+#include "utils/list.h"
 #include "alt_bot/alt_bot.h"
 
 #define DEPTH 6
@@ -54,8 +55,10 @@ int main(){
     int alt_wins = 0;
     int draws = 0;
     int total_games = 0;
+    // _list *moves_list = gl_create_list(sizeof(_move));
     for (int i = 0; i < 30; i++){
         for (int j = 0; j < 2; j++){
+            // gl_clear_list(moves_list);
             total_games++;
             se_init_search_context(&context_1);
             se_init_search_context(&context_2);
@@ -71,28 +74,40 @@ int main(){
             }
             while (board->game_state == ONGOING){
                 _move move;
-                if (j == 0){
-                    move = se_search(board, DEPTH, &context_1, &stats_1);
+                move = (j == 0 ? se_search(board, DEPTH, &context_1, &stats_1) : alt_search(board, DEPTH, &context_2, &stats_2));
+                cb_make_move(board, move);
+                if (board->game_state == ONGOING){
+                    move = (j == 0 ? alt_search(board, DEPTH, &context_2, &stats_2) : se_search(board, DEPTH, &context_1, &stats_1));
                     cb_make_move(board, move);
-                    if (board->game_state == ONGOING){
-                        move = alt_search(board, DEPTH, &context_2, &stats_2);
-                        cb_make_move(board, move);
-                    }
-                    else{
-                        break;
-                    }
                 }
                 else{
-                    move = alt_search(board, DEPTH, &context_1, &stats_1);
-                    cb_make_move(board, move);
-                    if (board->game_state == ONGOING){
-                        move = se_search(board, DEPTH, &context_2, &stats_2);
-                        cb_make_move(board, move);
-                    }
-                    else{
-                        break;
-                    }
+                    break;
                 }
+                // if (j == 0){
+                //     move = se_search(board, DEPTH, &context_1, &stats_1);
+                //     gl_append_item(moves_list, &move);
+                //     cb_make_move(board, move);
+                //     if (board->game_state == ONGOING){
+                //         move = alt_search(board, DEPTH, &context_2, &stats_2);
+                //         gl_append_item(moves_list, &move);
+                //         cb_make_move(board, move);
+                //     }
+                //     else{
+                //         break;
+                //     }
+                // }
+                // else{
+                //     move = alt_search(board, DEPTH, &context_1, &stats_1);
+                //     gl_append_item(moves_list, &move);
+                //     cb_make_move(board, move);
+                //     if (board->game_state == ONGOING){
+                //         move = se_search(board, DEPTH, &context_2, &stats_2);
+                //         cb_make_move(board, move);
+                //     }
+                //     else{
+                //         break;
+                //     }
+                // }
 
                 // cb_board_to_fen(board, fen);
                 // printf("%s\n", fen);
