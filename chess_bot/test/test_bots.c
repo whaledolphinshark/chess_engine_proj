@@ -105,7 +105,9 @@ int main(){
                 mv_print_move(*(_move *)gl_access_item(moves_list, i), 0);
                 printf(" ");
             }
-            printf("\n\n");
+            char fen[MAX_FEN_LENGTH];
+            cb_board_to_fen(board, fen);
+            printf("\nfinal position: %s\n\n", fen);
         }
     }
 
