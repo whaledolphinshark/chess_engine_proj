@@ -1,4 +1,4 @@
 bin/
 *.mk
 todo.txt
-alt_bot/*
+**/alt_bot/*
