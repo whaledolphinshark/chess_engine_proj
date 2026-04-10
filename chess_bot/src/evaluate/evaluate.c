@@ -103,8 +103,8 @@ int ev_evaluate(_board *board){
         }
     }
 
-    // white_score += bb_get_bits_set(white_control);
-    // black_score += bb_get_bits_set(black_control);
+    white_score += 2 * bb_get_bits_set(white_control);
+    black_score += 2 * bb_get_bits_set(black_control);
 
     int endgame_value = king_end_table[white_king_square];
     white_score += (king_mid_table[white_king_square] - endgame_value) * phase_value / TOTAL_PHASE_VALUE + endgame_value;
