@@ -14,6 +14,7 @@
 #include "chess_engine/transposition_table.h"
 
 #define ERROR_MSG "Usage: test_match [-s] [-d]\n-s: which color the bot play, 0 for white, 1 for black\n-d: depth the bot should search to\n"
+#define MAX_TIME 6
 
 int validate_board_move(_board *board, _move move){
     _move moves[MAX_MOVES];
@@ -91,7 +92,7 @@ int player_move(_board *board, char *input){
 int bot_move(_board *board, _search_context *context, int depth){
     _search_stats stats = {0, 0, 0, 0, 0};
     clock_t start = clock();
-    _move move = se_search(board, depth, context, &stats);
+    _move move = se_search(board, depth, MAX_TIME, context, &stats);
     clock_t end = clock();
     int max = 0;
     int min = 0;

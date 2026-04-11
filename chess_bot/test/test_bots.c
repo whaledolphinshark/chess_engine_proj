@@ -11,6 +11,7 @@
 #include "alt_bot/alt_bot.h"
 
 #define DEPTH 6
+#define MAX_TIME 6
 
 int main(){
     init_chess_engine();
@@ -71,11 +72,11 @@ int main(){
             }
             while (board->game_state == ONGOING){
                 _move move;
-                move = (j == 0 ? se_search(board, DEPTH, &context_1, &stats_1) : alt_search(board, DEPTH, &context_2, &stats_2));
+                move = (j == 0 ? se_search(board, DEPTH, MAX_TIME, &context_1, &stats_1) : alt_search(board, DEPTH, &context_2, &stats_2));
                 gl_append_item(moves_list, &move);
                 cb_make_move(board, move);
                 if (board->game_state == ONGOING){
-                    move = (j == 0 ? alt_search(board, DEPTH, &context_2, &stats_2) : se_search(board, DEPTH, &context_1, &stats_1));
+                    move = (j == 0 ? alt_search(board, DEPTH, &context_2, &stats_2) : se_search(board, DEPTH, MAX_TIME, &context_1, &stats_1));
                     gl_append_item(moves_list, &move);
                     cb_make_move(board, move);
                 }

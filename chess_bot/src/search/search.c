@@ -1,6 +1,6 @@
 #include <limits.h>
 #include <stdlib.h>
-#include <stdio.h>
+#include <time.h>
 
 #include "chess_engine/search.h"
 #include "chess_engine/board.h"
@@ -134,6 +134,14 @@ static int search(_board *board, int depth, int alpha, int beta, int pv, _search
         if (depth > 2 && values[i] <= 0){
             depth_reduction++;
         }
+        // if (depth > 2 && values[i] <= 0){
+        //     if (values[i] <= 0){
+        //         depth_reduction++;
+        //     }
+        //     if (2 * i > move_count){
+        //         depth_reduction++;
+        //     }
+        // }
 
         cb_make_move(board, move);
         if (i == 0 && pv == 1){
@@ -177,7 +185,7 @@ static int search(_board *board, int depth, int alpha, int beta, int pv, _search
     return best_score;
 }
 
-_move se_search(_board *board, int depth, _search_context *context, _search_stats *stats){
+_move se_search(_board *board, int depth, double time, _search_context *context, _search_stats *stats){
     if (board == NULL || stats == NULL){
         eh_die("passed in null pointer");
     }
@@ -188,8 +196,20 @@ _move se_search(_board *board, int depth, _search_context *context, _search_stat
         eh_die("context initialized incorrectly");
     }
 
-    for (int i = 1; i <= depth; i++){
+    // for (int i = 1; i <= depth; i++){
+    //     search(board, i, DEFAULT_ALPHA, DEFAULT_BETA, 1, context, stats);
+    // }
+
+    int i = 1;
+    clock_t start = clock();
+    while (i <= depth){
         search(board, i, DEFAULT_ALPHA, DEFAULT_BETA, 1, context, stats);
+        i++;
+    }
+
+    while ((double)(clock() - start) / CLOCKS_PER_SEC < time){
+        search(board, i, DEFAULT_ALPHA, DEFAULT_BETA, 1, context, stats);
+        i++;
     }
 
     for (int i = 0; i < 12; i++){
