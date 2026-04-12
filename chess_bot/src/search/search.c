@@ -131,17 +131,14 @@ static int search(_board *board, int depth, int alpha, int beta, int pv, _search
         int score;
         _move move = moves[i];
         int depth_reduction = 1;
-        if (depth > 2 && values[i] <= 0){
-            depth_reduction++;
+        if (depth > 2){
+            if (values[i] <= 0){
+                depth_reduction++;
+            }
+            if (2 * i > move_count){
+                depth_reduction++;
+            }
         }
-        // if (depth > 2 && values[i] <= 0){
-        //     if (values[i] <= 0){
-        //         depth_reduction++;
-        //     }
-        //     if (2 * i > move_count){
-        //         depth_reduction++;
-        //     }
-        // }
 
         cb_make_move(board, move);
         if (i == 0 && pv == 1){
@@ -195,10 +192,6 @@ _move se_search(_board *board, int depth, double time, _search_context *context,
     if (tt_get_item_size(context->table) != sizeof(_tt_search_entry)){
         eh_die("context initialized incorrectly");
     }
-
-    // for (int i = 1; i <= depth; i++){
-    //     search(board, i, DEFAULT_ALPHA, DEFAULT_BETA, 1, context, stats);
-    // }
 
     int i = 1;
     clock_t start = clock();
