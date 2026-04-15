@@ -3,8 +3,29 @@
 
 #include "chess_engine/transposition_table.h"
 #include "utils/bitboard_util.h"
-#include "transposition_table_internal.h"
 #include "utils/error_handling.h"
+
+#define MIN_NUM_BUCKETS 32
+#define LOAD_FACTOR 2
+
+typedef enum{
+    FILLED = 0,
+    EMPTY = 1
+}_bucket_occupancy;
+
+typedef struct _key_value_pair{
+    _bucket_occupancy occupancy;
+    uint64_t hash;
+    struct _key_value_pair *next;
+    void *value;
+}_key_value_pair;
+
+typedef struct _transposition_table{
+    unsigned long item_size;
+    int num_items;
+    uint64_t num_buckets;
+    _key_value_pair *buckets;
+}_transposition_table;
 
 static _key_value_pair *malloc_buckets(uint64_t num_buckets){
     _key_value_pair *new_buckets = malloc(sizeof(_key_value_pair) * num_buckets);
