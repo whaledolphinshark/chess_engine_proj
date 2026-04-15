@@ -54,10 +54,10 @@ static int place_entry(_key_value_pair *buckets, _key_value_pair *entry, uint64_
 static void resize_table(_transposition_table *hash_table, int expand){
     uint64_t new_num_buckets;
     if (expand == 1){
-        new_num_buckets = hash_table->num_buckets << 2;
+        new_num_buckets = hash_table->num_buckets << 1;
     }
     else{
-        new_num_buckets = hash_table->num_buckets >> 2;
+        new_num_buckets = hash_table->num_buckets >> 1;
     }
     _key_value_pair *new_buckets = malloc_buckets(new_num_buckets);
 
