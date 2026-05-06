@@ -7,8 +7,11 @@ typedef struct{
     char *data;
     size_t size;
     int length;
+    int move_first;
+    char *game_id;
 }_response;
 
+// this is a mess
 size_t write_callback(void *contents, size_t size, size_t nmemb, void *userp) {
     const size_t total_length = size * nmemb;
     _response *response = (_response *)userp;
@@ -19,7 +22,7 @@ size_t write_callback(void *contents, size_t size, size_t nmemb, void *userp) {
         response->data = realloc(response->data, new_length);
         if (response->data == NULL){
             fprintf(stderr, "realloc() failed");
-            return 0;
+            exit(EXIT_FAILURE);
         }
     }
 
@@ -38,14 +41,33 @@ size_t write_callback(void *contents, size_t size, size_t nmemb, void *userp) {
             const int type_index = ptr_1 - response->data;
             const int game_start_index = ptr_2 - response->data;
             if (ptr_1 != NULL && ptr_2 != NULL && type_index < i && game_start_index - type_index == 8){
-                // new game has started, check if my turn first
+                // new game has started
+                // check if my turn first
                 char *ptr_3 = strstr(start, "\"isMyTurn\"");
                 const int is_my_turn_index = ptr_3 - response->data;
                 if (ptr_3 != NULL && is_my_turn_index < i){
-                    // read value and if true, make move else dont
-                    if (response->data[is_my_turn_index + 12] == 't'){
-                        // make move
+                    response->move_first = response->data[is_my_turn_index + 12] == 't' ? 1 : 0;
+                }
 
+                // get game id
+                char *ptr_4 = strstr(start, "\"gameId\"");
+                const int id_index = ptr_4 - response->data;
+                if (ptr_4 != NULL && id_index < i){
+                    const int id_value_index = id_index + 11;
+                    int id_length = 0;
+                    int j = id_value_index;
+                    while (response->data[j] != '\"'){
+                        id_length++;
+                        j++;
+                    }
+
+                    response->game_id = malloc(sizeof(char) * (id_length + 1));
+                    if (response->game_id == NULL){
+                        fprintf(stderr, "malloc() failed");
+                        exit(EXIT_FAILURE);
+                    }
+                    for (int k = 0; k < id_length; k++){
+                        response->game_id[k] = response->data[id_value_index + k];
                     }
                 }
 
@@ -67,6 +89,10 @@ size_t write_callback(void *contents, size_t size, size_t nmemb, void *userp) {
     return total_length;
 }
 
+void play_game(int my_turn, char *id){
+
+}
+
 int main(){
     // stuff here
     _response response;
@@ -77,6 +103,8 @@ int main(){
     }
     response.size = 0;
     response.length = 0;
+    response.move_first = 0;
+    response.game_id = NULL;
     curl_global_init(CURL_GLOBAL_ALL);
     CURL *curl = curl_easy_init();
 
@@ -91,7 +119,12 @@ int main(){
 
         CURLcode result = curl_easy_perform(curl);
 
-        if (result != CURLE_OK) {
+        // this feels kinda hacky
+        if (result == CURLE_WRITE_ERROR){
+            // start game i guess
+            play_game(response.move_first, response.game_id);
+        }
+        else if (result != CURLE_OK) {
             fprintf(stderr, "Request failed: %s\n", curl_easy_strerror(result));
         }
 
