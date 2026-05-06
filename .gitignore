@@ -2,3 +2,4 @@ bin/
 *.mk
 todo.txt
 **/alt_bot/*
+.vscode
