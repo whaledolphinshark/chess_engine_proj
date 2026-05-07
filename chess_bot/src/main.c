@@ -3,13 +3,60 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "chess_engine/chess_types.h"
+#include "chess_engine/board.h"
+#include "chess_engine/search.h"
+
 typedef struct{
     char *data;
     size_t size;
     int length;
     int move_first;
     char *game_id;
+    int time;
 }_response;
+
+void get_json_data(char *start, char *end, char *name, char *value){
+    char *name_ptr = strstr(start, name);
+    value = NULL;
+    // check it was found and within range
+    if (name_ptr == NULL || end - name_ptr <= 0){
+        return;
+    }
+
+    // get to value
+    while (*name_ptr != ' '){
+        name_ptr++;
+        if (end - name_ptr <= 0 || *name_ptr == '\0'){
+            return;
+        }
+    }
+    name_ptr++;
+    if (end - name_ptr <= 0 || *name_ptr == '\0'){
+        return;
+    }
+
+    // get size of value
+    char *temp = name_ptr;
+    int size = 1;
+    while (temp != ','){
+        temp++;
+        size++;
+        if (end - temp <= 0 || *temp == '\0'){
+            return;
+        }
+    }
+
+    // get value
+    value = malloc(sizeof(char) * size);
+    if (value == NULL){
+        fprintf(stderr, "malloc() failed");
+    }
+    for (int i = 0; i < size - 1; i++){
+        value[i] = name_ptr[i];
+    }
+    value[size - 1] = '\0';
+}
 
 // this is a mess
 size_t write_callback(void *contents, size_t size, size_t nmemb, void *userp) {
@@ -90,7 +137,14 @@ size_t write_callback(void *contents, size_t size, size_t nmemb, void *userp) {
 }
 
 void play_game(int my_turn, char *id){
+    _board *board = cb_create_board();
+    _search_context context;
+    _search_stats stats;
+    se_init_search_context(&context);
 
+    if (my_turn == 1){
+        // se_search(board, 6, , &context, &stats);
+    }
 }
 
 int main(){
@@ -115,7 +169,7 @@ int main(){
         curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_callback);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&response);
-        // curl_easy_setopt(curl, CURLOPT_TCP_KEEPALIVE, 1L);
+        curl_easy_setopt(curl, CURLOPT_TCP_KEEPALIVE, 1L);
 
         CURLcode result = curl_easy_perform(curl);
 
