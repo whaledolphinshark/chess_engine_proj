@@ -16,7 +16,7 @@ typedef struct{
     int time;
 }_response;
 
-void get_json_data(char *start, char *end, char *name, char *value){
+void get_json_data(const char *start, const char *end, const char *name, char *value){
     char *name_ptr = strstr(start, name);
     value = NULL;
     // check it was found and within range
@@ -81,43 +81,39 @@ size_t write_callback(void *contents, size_t size, size_t nmemb, void *userp) {
 
     // check for responses
     while (i < response->length){
+        // found full response
         if (response->data[i] == '\n'){
+            int found_game = 0;
             // find type
-            char *ptr_1 = strstr(start, "\"type\"");
-            char *ptr_2 = strstr(start, "\"gameStart\"");
-            const int type_index = ptr_1 - response->data;
-            const int game_start_index = ptr_2 - response->data;
-            if (ptr_1 != NULL && ptr_2 != NULL && type_index < i && game_start_index - type_index == 8){
-                // new game has started
-                // check if my turn first
-                char *ptr_3 = strstr(start, "\"isMyTurn\"");
-                const int is_my_turn_index = ptr_3 - response->data;
-                if (ptr_3 != NULL && is_my_turn_index < i){
-                    response->move_first = response->data[is_my_turn_index + 12] == 't' ? 1 : 0;
-                }
+            char *val = NULL;
+            const char *end = response + i;
+            get_json_data(start, end, "\"type\"", val);
+            if (val != NULL && strcmp(val, "\"gameStart\"") == 0){
+                free(val);
+                val = NULL;
+                // check if my turn
+                get_json_data(start, end, "\"isMyTurn\"", val);
+                if (val != NULL){
+                    response->move_first = strcmp(val, "true") == 0 ? 1 : 0;
+                    free(val);
+                    val = NULL;
 
-                // get game id
-                char *ptr_4 = strstr(start, "\"gameId\"");
-                const int id_index = ptr_4 - response->data;
-                if (ptr_4 != NULL && id_index < i){
-                    const int id_value_index = id_index + 11;
-                    int id_length = 0;
-                    int j = id_value_index;
-                    while (response->data[j] != '\"'){
-                        id_length++;
-                        j++;
-                    }
-
-                    response->game_id = malloc(sizeof(char) * (id_length + 1));
-                    if (response->game_id == NULL){
-                        fprintf(stderr, "malloc() failed");
-                        exit(EXIT_FAILURE);
-                    }
-                    for (int k = 0; k < id_length; k++){
-                        response->game_id[k] = response->data[id_value_index + k];
+                    // get game id
+                    get_json_data(start, end, "\"gameId\"", val);
+                    if (val != NULL){
+                        int j = 1;
+                        while (val[j] != '\"'){
+                            val[j - 1] = val[j];
+                            j++;
+                        }
+                        val[j] = '\0';
+                        response->game_id = val;
+                        found_game = 1;
                     }
                 }
+            }
 
+            if (found_game == 1){
                 return CURL_WRITEFUNC_ERROR;
             }
 
