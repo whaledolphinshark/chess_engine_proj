@@ -3,3 +3,4 @@ bin/
 todo.txt
 **/alt_bot/*
 .vscode
+*.env
