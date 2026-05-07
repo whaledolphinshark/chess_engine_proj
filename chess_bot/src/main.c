@@ -14,6 +14,7 @@ typedef struct{
     int move_first;
     char *game_id;
     int time;
+    int seconds;
 }_response;
 
 void get_json_data(const char *start, const char *end, const char *name, char *value){
@@ -98,6 +99,14 @@ size_t write_callback(void *contents, size_t size, size_t nmemb, void *userp) {
                     free(val);
                     val = NULL;
 
+                    // get time
+                    get_json_data(start, end, "\"secondsLeft\"", val);
+                    if (val != NULL){
+                        response->seconds = atoi(val);
+                        free(val);
+                        val = NULL;
+                    }
+
                     // get game id
                     get_json_data(start, end, "\"gameId\"", val);
                     if (val != NULL){
@@ -132,7 +141,7 @@ size_t write_callback(void *contents, size_t size, size_t nmemb, void *userp) {
     return total_length;
 }
 
-void play_game(int my_turn, char *id){
+void play_game(int my_turn, char *id, int seconds){
     _board *board = cb_create_board();
     _search_context context;
     _search_stats stats;
@@ -155,6 +164,7 @@ int main(){
     response.length = 0;
     response.move_first = 0;
     response.game_id = NULL;
+    response.seconds = 0;
     curl_global_init(CURL_GLOBAL_ALL);
     CURL *curl = curl_easy_init();
 
@@ -172,7 +182,7 @@ int main(){
         // this feels kinda hacky
         if (result == CURLE_WRITE_ERROR){
             // start game i guess
-            play_game(response.move_first, response.game_id);
+            play_game(response.move_first, response.game_id, response.seconds);
         }
         else if (result != CURLE_OK) {
             fprintf(stderr, "Request failed: %s\n", curl_easy_strerror(result));
