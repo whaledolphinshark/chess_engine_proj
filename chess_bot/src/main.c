@@ -5,6 +5,7 @@
 #include <pthread.h>
 
 #include "chess_engine/chess_types.h"
+#include "chess_engine/init_chess_engine.h"
 #include "chess_engine/board.h"
 #include "chess_engine/search.h"
 
@@ -222,12 +223,13 @@ int main(){
     response.size = 0;
     response.length = 0;
     curl_global_init(CURL_GLOBAL_ALL);
+    init_chess_engine();
     CURL *curl = curl_easy_init();
 
     if (curl != NULL){
         struct curl_slist *headers = curl_slist_append(NULL, "Authorization: Bearer YOUR_API_TOKEN");
 
-        curl_easy_setopt(curl, CURLOPT_URL, /*"https://lichess.org/api/stream/event"*/ "https://httpbin.org/stream/10");
+        curl_easy_setopt(curl, CURLOPT_URL, "https://lichess.org/api/stream/event");
         curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, event_stream_callback);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&response);
