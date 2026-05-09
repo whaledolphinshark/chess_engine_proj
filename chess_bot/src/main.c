@@ -16,11 +16,17 @@ typedef struct{
 
 typedef struct{
     char *id;
+    int id_length;
     _color color;
 }_game_args;
 
 typedef struct{
-
+    char *data;
+    size_t size;
+    int length;
+    _board *board;
+    _search_context *context;
+    _search_stats *stats;
 }_board_stream_response;
 
 void get_json_data(const char *start, const char *end, const char *name, char *value){
@@ -73,15 +79,50 @@ size_t board_event_callback(void *contents, size_t size, size_t nmemb, void *use
 void play_game(void *args){
     _game_args *arg = (_game_args *)args;
     const _color color = arg->color;
+    const int id_length = arg->id_length;
     char *id = arg->id;
-    _board *board = cb_create_board();
+    _board_stream_response response;
+    response.data = malloc(1);
+    if (response.data == NULL){
+        fprintf(stderr, "malloc() failed");
+        return 1;
+    }
+    response.size = 0;
+    response.length = 0;
+    response.board = cb_create_board();
     _search_context context;
     _search_stats stats;
     se_init_search_context(&context);
+    response.context = &context;
+    response.stats = &stats;
 
     // listen to stream
+    CURL *curl = curl_easy_init();
+    if (curl != NULL){
+        struct curl_slist *headers = curl_slist_append(NULL, "Authorization: Bearer YOUR_API_TOKEN");
 
+        // make url
+        char *base = "https://lichess.org/api/board/game/stream/";
+        char *url = malloc(sizeof(char) * (42 + id_length));
+        if (url == NULL){
+            fprintf(stderr, "malloc() failed");
+            exit(EXIT_FAILURE);
+        }
+        sprintf(url, "%s%s", base, id);
 
+        curl_easy_setopt(curl, CURLOPT_URL, url);
+        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, board_event_callback);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&response);
+        curl_easy_setopt(curl, CURLOPT_TCP_KEEPALIVE, 1L);
+
+        curl_slist_free_all(headers);
+        curl_easy_cleanup(curl);
+    }
+
+    free(id);
+    cb_destroy_board(response.board);
+    se_destroy_search_context(response.context);
 }
 
 // this is a mess
@@ -129,15 +170,16 @@ size_t event_stream_callback(void *contents, size_t size, size_t nmemb, void *us
                     get_json_data(start, end, "\"gameId\"", val);
                     if (val != NULL){
                         int j = 1;
+                        int id_length = 1;
                         while (val[j] != '\"'){
                             val[j - 1] = val[j];
                             j++;
+                            id_length++;
                         }
                         val[j] = '\0';
                         args.id = val;
+                        args.id_length = id_length;
                         found_game = 1;
-                        free(val);
-                        val = NULL;
                     }
                 }
             }
