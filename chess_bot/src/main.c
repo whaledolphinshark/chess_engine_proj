@@ -9,10 +9,14 @@
 #include "chess_engine/board.h"
 #include "chess_engine/search.h"
 
+#define MAX_GAMES_PLAYED 5
+
 typedef struct{
     char *data;
     size_t size;
     int length;
+    int games_accepted;
+    pthread_t games[MAX_GAMES_PLAYED];
 }_event_stream_response;
 
 typedef struct{
@@ -151,7 +155,6 @@ size_t event_stream_callback(void *contents, size_t size, size_t nmemb, void *us
     while (i < response->length){
         // found full response
         if (response->data[i] == '\n'){
-            int found_game = 0;
             _game_args args;
             // find type
             char *val = NULL;
@@ -180,22 +183,23 @@ size_t event_stream_callback(void *contents, size_t size, size_t nmemb, void *us
                         val[j] = '\0';
                         args.id = val;
                         args.id_length = id_length;
-                        found_game = 1;
+
+                        // start a thread for this game
+                        pthread_t thread_id;
+
+                        if (pthread_create(&thread_id, NULL, play_game, &args) != 0){
+                            fprintf(stderr, "failed to create thread");
+                            exit(EXIT_FAILURE);
+                        }
+
+                        response->games[response->games_accepted] = thread_id;
+                        response->games_accepted++;
+
+                        if (response->games_accepted >= MAX_GAMES_PLAYED){
+                            return 0;
+                        }
                     }
                 }
-            }
-
-            // start a thread for this game
-            if (found_game == 1){
-                // start a thread for this game
-                pthread_t thread_id;
-
-                if (pthread_create(&thread_id, NULL, play_game, &args) != 0){
-                    fprintf(stderr, "failed to create thread");
-                    exit(EXIT_FAILURE);
-                }
-
-                pthread_detach(thread_id);
             }
 
             start = response->data + i + 1;
@@ -222,6 +226,7 @@ int main(){
     }
     response.size = 0;
     response.length = 0;
+    response.games_accepted = 0;
     curl_global_init(CURL_GLOBAL_ALL);
     init_chess_engine();
     CURL *curl = curl_easy_init();
@@ -246,6 +251,9 @@ int main(){
     }
 
     free(response.data);
+    for (int i = 0; i < MAX_GAMES_PLAYED; i++){
+        pthread_join(response.games[i], NULL);
+    }
     curl_global_cleanup();
     return 0;
 }
