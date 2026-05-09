@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <pthread.h>
 
 #include "chess_engine/chess_types.h"
 #include "chess_engine/board.h"
@@ -11,11 +12,16 @@ typedef struct{
     char *data;
     size_t size;
     int length;
-    int move_first;
-    char *game_id;
-    int time;
-    int seconds;
-}_response;
+}_event_stream_response;
+
+typedef struct{
+    char *id;
+    _color color;
+}_game_args;
+
+typedef struct{
+
+}_board_stream_response;
 
 void get_json_data(const char *start, const char *end, const char *name, char *value){
     char *name_ptr = strstr(start, name);
@@ -59,10 +65,29 @@ void get_json_data(const char *start, const char *end, const char *name, char *v
     value[size - 1] = '\0';
 }
 
-// this is a mess
-size_t write_callback(void *contents, size_t size, size_t nmemb, void *userp) {
+size_t board_event_callback(void *contents, size_t size, size_t nmemb, void *userp){
     const size_t total_length = size * nmemb;
-    _response *response = (_response *)userp;
+    _board_stream_response *response = (_board_stream_response *)userp;
+}
+
+void play_game(void *args){
+    _game_args *arg = (_game_args *)args;
+    const _color color = arg->color;
+    char *id = arg->id;
+    _board *board = cb_create_board();
+    _search_context context;
+    _search_stats stats;
+    se_init_search_context(&context);
+
+    // listen to stream
+
+
+}
+
+// this is a mess
+size_t event_stream_callback(void *contents, size_t size, size_t nmemb, void *userp) {
+    const size_t total_length = size * nmemb;
+    _event_stream_response *response = (_event_stream_response *)userp;
 
     const size_t new_length = response->length == 0 ? total_length + 1 : response->length + total_length;
     if (new_length > response->size){
@@ -85,6 +110,7 @@ size_t write_callback(void *contents, size_t size, size_t nmemb, void *userp) {
         // found full response
         if (response->data[i] == '\n'){
             int found_game = 0;
+            _game_args args;
             // find type
             char *val = NULL;
             const char *end = response + i;
@@ -93,19 +119,11 @@ size_t write_callback(void *contents, size_t size, size_t nmemb, void *userp) {
                 free(val);
                 val = NULL;
                 // check if my turn
-                get_json_data(start, end, "\"isMyTurn\"", val);
+                get_json_data(start, end, "\"color\"", val);
                 if (val != NULL){
-                    response->move_first = strcmp(val, "true") == 0 ? 1 : 0;
+                    args.color = strcmp(val, "\"white\"") == 0 ? WHITE : BLACK;
                     free(val);
                     val = NULL;
-
-                    // get time
-                    get_json_data(start, end, "\"secondsLeft\"", val);
-                    if (val != NULL){
-                        response->seconds = atoi(val);
-                        free(val);
-                        val = NULL;
-                    }
 
                     // get game id
                     get_json_data(start, end, "\"gameId\"", val);
@@ -116,14 +134,25 @@ size_t write_callback(void *contents, size_t size, size_t nmemb, void *userp) {
                             j++;
                         }
                         val[j] = '\0';
-                        response->game_id = val;
+                        args.id = val;
                         found_game = 1;
+                        free(val);
+                        val = NULL;
                     }
                 }
             }
 
+            // start a thread for this game
             if (found_game == 1){
-                return CURL_WRITEFUNC_ERROR;
+                // start a thread for this game
+                pthread_t thread_id;
+
+                if (pthread_create(&thread_id, NULL, play_game, &args) != 0){
+                    fprintf(stderr, "failed to create thread");
+                    exit(EXIT_FAILURE);
+                }
+
+                pthread_detach(thread_id);
             }
 
             start = response->data + i + 1;
@@ -141,20 +170,8 @@ size_t write_callback(void *contents, size_t size, size_t nmemb, void *userp) {
     return total_length;
 }
 
-void play_game(int my_turn, char *id, int seconds){
-    _board *board = cb_create_board();
-    _search_context context;
-    _search_stats stats;
-    se_init_search_context(&context);
-
-    if (my_turn == 1){
-        // se_search(board, 6, , &context, &stats);
-    }
-}
-
 int main(){
-    // stuff here
-    _response response;
+    _event_stream_response response;
     response.data = malloc(1);
     if (response.data == NULL){
         fprintf(stderr, "malloc() failed");
@@ -162,9 +179,6 @@ int main(){
     }
     response.size = 0;
     response.length = 0;
-    response.move_first = 0;
-    response.game_id = NULL;
-    response.seconds = 0;
     curl_global_init(CURL_GLOBAL_ALL);
     CURL *curl = curl_easy_init();
 
@@ -173,22 +187,15 @@ int main(){
 
         curl_easy_setopt(curl, CURLOPT_URL, /*"https://lichess.org/api/stream/event"*/ "https://httpbin.org/stream/10");
         curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_callback);
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, event_stream_callback);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&response);
         curl_easy_setopt(curl, CURLOPT_TCP_KEEPALIVE, 1L);
 
         CURLcode result = curl_easy_perform(curl);
 
-        // this feels kinda hacky
-        if (result == CURLE_WRITE_ERROR){
-            // start game i guess
-            play_game(response.move_first, response.game_id, response.seconds);
-        }
-        else if (result != CURLE_OK) {
+        if (result != CURLE_OK) {
             fprintf(stderr, "Request failed: %s\n", curl_easy_strerror(result));
         }
-
-        printf("response:\n%s\n", response.data);
 
         curl_slist_free_all(headers);
         curl_easy_cleanup(curl);
