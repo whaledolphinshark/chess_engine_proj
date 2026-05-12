@@ -29,6 +29,7 @@ typedef struct{
     char *data;
     size_t size;
     int length;
+    int moves_made;
     _color color;
     _board *board;
     _search_context *context;
@@ -108,6 +109,20 @@ int count_moves(char *moves){
         fprintf(stderr, "passed in null pointer");
         exit(EXIT_FAILURE);
     }
+
+    if (moves[0] == '\0'){
+        return 0;
+    }
+
+    int i = 0;
+    int num_moves = 1;
+    while (moves[i] != '\0'){
+        if (moves[i] == ' '){
+            num_moves++;
+        }
+    }
+
+    return num_moves;
 }
 
 size_t board_event_callback(void *contents, size_t size, size_t nmemb, void *userp){
@@ -125,10 +140,20 @@ size_t board_event_callback(void *contents, size_t size, size_t nmemb, void *use
             char *val = NULL;
             const char *end = response + i;
             get_json_data(start, end, "\"moves\"", val);
-            if (val == NULL || strcmp(val, "\"gameStart\"") != 0){
+            if (val == NULL){
                 start = response->data + i + 1;
                 i++;
                 continue;
+            }
+            const int num_moves = count_moves(val);
+            if (num_moves > response->moves_made){
+                _color last_move = num_moves % 2 == 0 ? WHITE : BLACK;
+                // check if opponent made last move
+                if (last_move != response->color){
+                    // play opponent move on board
+
+                    // then play my move
+                }
             }
 
         }
@@ -149,6 +174,7 @@ void play_game(void *args){
         return 1;
     }
     response.size = 0;
+    response.moves_made = 0;
     response.length = 0;
     response.color = color;
     response.board = cb_create_board();
