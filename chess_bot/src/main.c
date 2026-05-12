@@ -147,15 +147,32 @@ size_t board_event_callback(void *contents, size_t size, size_t nmemb, void *use
             }
             const int num_moves = count_moves(val);
             if (num_moves > response->moves_made){
-                _color last_move = num_moves % 2 == 0 ? WHITE : BLACK;
+                const _color last_move = num_moves % 2 == 0 ? WHITE : BLACK;
+                const _color my_color = response->color;
                 // check if opponent made last move
-                if (last_move != response->color){
+                if (last_move != my_color){
                     // play opponent move on board
+                    // TBD
+                    free(val);
+                    val = NULL;
 
                     // get time
-
+                    get_json_data(start, end, my_color == WHITE ? "\"wtime\"" : "\"btime\"", val);
+                    if (val == NULL){
+                        start = response->data + i + 1;
+                        i++;
+                        continue;
+                    }
+                    const int ms = atoi(val);
+                    const int seconds = ms / 1000;
+                    free(val);
+                    val = NULL;
 
                     // then play my move
+                    const _move move = se_search(response->board, 6, seconds < 6 ? seconds : 6, response->context, response->stats);
+                    cb_make_move(response->board, move);
+
+                    // tell server
                 }
             }
 
