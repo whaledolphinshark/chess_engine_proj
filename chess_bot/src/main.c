@@ -64,7 +64,7 @@ void get_json_data(const char *start, const char *end, const char *name, char *v
     // get size of value
     char *temp = name_ptr;
     int size = 1;
-    while (temp != ','){
+    while (*temp != ','){
         temp++;
         size++;
         if (end - temp <= 0 || *temp == '\0'){
@@ -90,7 +90,7 @@ void append_contents(char **data, char *contents, size_t content_len, size_t *da
     }
 
     const size_t new_len = *data_len == 0 ? content_len + 1 : *data_len + content_len;
-    if (new_len > data_size){
+    if (new_len > *data_size){
         *data_size = new_len;
         *data = realloc(*data, new_len);
         if (*data == NULL){
@@ -130,7 +130,7 @@ size_t board_event_callback(void *contents, size_t size, size_t nmemb, void *use
     _board_stream_response *response = (_board_stream_response *)userp;
 
     int i = response->length;
-    append_contents(&response->data, contents, content_len, &response->length, &response->size);
+    append_contents(&response->data, contents, content_len, (size_t *)(&response->length), &response->size);
     char *start = response->data;
 
     // check for responses  
@@ -138,7 +138,7 @@ size_t board_event_callback(void *contents, size_t size, size_t nmemb, void *use
         if (response->data[i] == '\n'){
             // get moves
             char *val = NULL;
-            const char *end = response + i;
+            const char *end = response->data + i;
             get_json_data(start, end, "\"moves\"", val);
             if (val == NULL){
                 start = response->data + i + 1;
@@ -152,7 +152,15 @@ size_t board_event_callback(void *contents, size_t size, size_t nmemb, void *use
                 // check if opponent made last move
                 if (last_move != my_color){
                     // play opponent move on board
-                    // TBD
+                    int spaces = num_moves - 1;
+                    int j = 0;
+                    while (spaces != 0){
+                        if (val[j] == ' '){
+                            spaces--;
+                        }
+                        j++;
+                    }
+
                     free(val);
                     val = NULL;
 
@@ -173,6 +181,7 @@ size_t board_event_callback(void *contents, size_t size, size_t nmemb, void *use
                     cb_make_move(response->board, move);
 
                     // tell server
+                    // TBD
                 }
             }
 
@@ -180,9 +189,11 @@ size_t board_event_callback(void *contents, size_t size, size_t nmemb, void *use
 
         i++;
     }
+
+    return content_len;
 }
 
-void play_game(void *args){
+void *play_game(void *args){
     _game_args *arg = (_game_args *)args;
     const _color color = arg->color;
     const int id_length = arg->id_length;
@@ -191,7 +202,7 @@ void play_game(void *args){
     response.data = malloc(1);
     if (response.data == NULL){
         fprintf(stderr, "malloc() failed");
-        return 1;
+        exit(EXIT_FAILURE);
     }
     response.size = 0;
     response.moves_made = 0;
@@ -231,6 +242,8 @@ void play_game(void *args){
     free(id);
     cb_destroy_board(response.board);
     se_destroy_search_context(response.context);
+
+    return NULL;
 }
 
 size_t event_stream_callback(void *contents, size_t size, size_t nmemb, void *userp) {
@@ -238,7 +251,7 @@ size_t event_stream_callback(void *contents, size_t size, size_t nmemb, void *us
     _event_stream_response *response = (_event_stream_response *)userp;
 
     int i = response->length;
-    append_contents(&response->data, contents, content_len, &response->length, &response->size);
+    append_contents(&response->data, contents, content_len, (size_t *)(&response->length), &response->size);
     char *start = response->data;
 
     // check for responses
@@ -248,7 +261,7 @@ size_t event_stream_callback(void *contents, size_t size, size_t nmemb, void *us
             _game_args args;
             // find type
             char *val = NULL;
-            const char *end = response + i;
+            const char *end = response->data + i;
             get_json_data(start, end, "\"type\"", val);
             if (val == NULL || strcmp(val, "\"gameStart\"") != 0){
                 start = response->data + i + 1;
