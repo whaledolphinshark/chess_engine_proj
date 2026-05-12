@@ -152,6 +152,9 @@ size_t board_event_callback(void *contents, size_t size, size_t nmemb, void *use
                 if (last_move != response->color){
                     // play opponent move on board
 
+                    // get time
+
+
                     // then play my move
                 }
             }
@@ -235,6 +238,8 @@ size_t event_stream_callback(void *contents, size_t size, size_t nmemb, void *us
                 i++;
                 continue;
             }
+            free(val);
+            val = NULL;
 
             // check if my turn
             get_json_data(start, end, "\"color\"", val);
