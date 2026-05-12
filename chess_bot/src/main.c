@@ -76,9 +76,29 @@ void get_json_data(const char *start, const char *end, const char *name, char *v
     value[size - 1] = '\0';
 }
 
+void append_contents(char **data, char *contents, size_t content_len, size_t *data_len, size_t *data_size){
+    const size_t new_len = *data_len == 0 ? content_len + 1 : *data_len + content_len;
+    if (new_len > data_size){
+        *data_size = new_len;
+        *data = realloc(*data, new_len);
+        if (*data == NULL){
+            fprintf(stderr, "realloc() failed");
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    memcpy(&(*data[*data_len]), contents, content_len);
+    *data[new_len] = '\0';
+    *data_len = new_len;
+}
+
 size_t board_event_callback(void *contents, size_t size, size_t nmemb, void *userp){
-    const size_t total_length = size * nmemb;
+    const size_t content_len = size * nmemb;
     _board_stream_response *response = (_board_stream_response *)userp;
+
+    append_contents(&response->data, contents, content_len, &response->length, &response->size);
+
+    // check for responses  
 }
 
 void play_game(void *args){
@@ -130,25 +150,12 @@ void play_game(void *args){
     se_destroy_search_context(response.context);
 }
 
-// this is a mess
 size_t event_stream_callback(void *contents, size_t size, size_t nmemb, void *userp) {
-    const size_t total_length = size * nmemb;
+    const size_t content_len = size * nmemb;
     _event_stream_response *response = (_event_stream_response *)userp;
 
-    const size_t new_length = response->length == 0 ? total_length + 1 : response->length + total_length;
-    if (new_length > response->size){
-        response->size = new_length;
-        response->data = realloc(response->data, new_length);
-        if (response->data == NULL){
-            fprintf(stderr, "realloc() failed");
-            exit(EXIT_FAILURE);
-        }
-    }
-
-    memcpy(&(response->data[response->length]), contents, total_length);
     int i = response->length;
-    response->length = new_length;
-    response->data[response->length] = '\0';
+    append_contents(&response->data, contents, content_len, &response->length, &response->size);
     char *start = response->data;
 
     // check for responses
@@ -160,61 +167,67 @@ size_t event_stream_callback(void *contents, size_t size, size_t nmemb, void *us
             char *val = NULL;
             const char *end = response + i;
             get_json_data(start, end, "\"type\"", val);
-            if (val != NULL && strcmp(val, "\"gameStart\"") == 0){
-                free(val);
-                val = NULL;
-                // check if my turn
-                get_json_data(start, end, "\"color\"", val);
-                if (val != NULL){
-                    args.color = strcmp(val, "\"white\"") == 0 ? WHITE : BLACK;
-                    free(val);
-                    val = NULL;
-
-                    // get game id
-                    get_json_data(start, end, "\"gameId\"", val);
-                    if (val != NULL){
-                        int j = 1;
-                        int id_length = 1;
-                        while (val[j] != '\"'){
-                            val[j - 1] = val[j];
-                            j++;
-                            id_length++;
-                        }
-                        val[j] = '\0';
-                        args.id = val;
-                        args.id_length = id_length;
-
-                        // start a thread for this game
-                        pthread_t thread_id;
-
-                        if (pthread_create(&thread_id, NULL, play_game, &args) != 0){
-                            fprintf(stderr, "failed to create thread");
-                            exit(EXIT_FAILURE);
-                        }
-
-                        response->games[response->games_accepted] = thread_id;
-                        response->games_accepted++;
-
-                        if (response->games_accepted >= MAX_GAMES_PLAYED){
-                            return 0;
-                        }
-                    }
-                }
+            if (val == NULL || strcmp(val, "\"gameStart\"") != 0){
+                start = response->data + i + 1;
+                i++;
+                continue;
             }
 
-            start = response->data + i + 1;
+            // check if my turn
+            get_json_data(start, end, "\"color\"", val);
+            if (val == NULL){
+                start = response->data + i + 1;
+                i++;
+                continue;
+            }
+            args.color = strcmp(val, "\"white\"") == 0 ? WHITE : BLACK;
+            free(val);
+            val = NULL;
+
+            // get game id
+            get_json_data(start, end, "\"gameId\"", val);
+            if (val == NULL){
+                start = response->data + i + 1;
+                i++;
+                continue;
+            }
+            int j = 1;
+            int id_length = 1;
+            while (val[j] != '\"'){
+                val[j - 1] = val[j];
+                j++;
+                id_length++;
+            }
+            val[j] = '\0';
+            args.id = val;
+            args.id_length = id_length;
+
+            // start a thread for this game
+            pthread_t thread_id;
+
+            if (pthread_create(&thread_id, NULL, play_game, &args) != 0){
+                fprintf(stderr, "failed to create thread");
+                exit(EXIT_FAILURE);
+            }
+
+            response->games[response->games_accepted] = thread_id;
+            response->games_accepted++;
+
+            if (response->games_accepted >= MAX_GAMES_PLAYED){
+                return 0;
+            }
         }
         i++;
     }
 
-    // resize data
+    // move data
     if (start != response->data){
         const int remaining_length = response->length - (start - response->data);
         memmove(response->data, start, sizeof(char) * remaining_length);
         response->length = remaining_length;
     }
 
-    return total_length;
+    return content_len;
 }
 
 int main(){
