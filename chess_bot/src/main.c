@@ -29,12 +29,18 @@ typedef struct{
     char *data;
     size_t size;
     int length;
+    _color color;
     _board *board;
     _search_context *context;
     _search_stats *stats;
 }_board_stream_response;
 
 void get_json_data(const char *start, const char *end, const char *name, char *value){
+    if (start == NULL || end == NULL || name == NULL || value == NULL){
+        fprintf(stderr, "passed in null pointer");
+        exit(EXIT_FAILURE);
+    }
+
     char *name_ptr = strstr(start, name);
     value = NULL;
     // check it was found and within range
@@ -77,6 +83,11 @@ void get_json_data(const char *start, const char *end, const char *name, char *v
 }
 
 void append_contents(char **data, char *contents, size_t content_len, size_t *data_len, size_t *data_size){
+    if (data == NULL || *data == NULL || contents == NULL || data_len == NULL || data_size == NULL){
+        fprintf(stderr, "passed in null pointer");
+        exit(EXIT_FAILURE);
+    }
+
     const size_t new_len = *data_len == 0 ? content_len + 1 : *data_len + content_len;
     if (new_len > data_size){
         *data_size = new_len;
@@ -92,13 +103,38 @@ void append_contents(char **data, char *contents, size_t content_len, size_t *da
     *data_len = new_len;
 }
 
+int count_moves(char *moves){
+    if (moves == NULL){
+        fprintf(stderr, "passed in null pointer");
+        exit(EXIT_FAILURE);
+    }
+}
+
 size_t board_event_callback(void *contents, size_t size, size_t nmemb, void *userp){
     const size_t content_len = size * nmemb;
     _board_stream_response *response = (_board_stream_response *)userp;
 
+    int i = response->length;
     append_contents(&response->data, contents, content_len, &response->length, &response->size);
+    char *start = response->data;
 
     // check for responses  
+    while (i < response->length){
+        if (response->data[i] == '\n'){
+            // get moves
+            char *val = NULL;
+            const char *end = response + i;
+            get_json_data(start, end, "\"moves\"", val);
+            if (val == NULL || strcmp(val, "\"gameStart\"") != 0){
+                start = response->data + i + 1;
+                i++;
+                continue;
+            }
+
+        }
+
+        i++;
+    }
 }
 
 void play_game(void *args){
@@ -114,6 +150,7 @@ void play_game(void *args){
     }
     response.size = 0;
     response.length = 0;
+    response.color = color;
     response.board = cb_create_board();
     _search_context context;
     _search_stats stats;
