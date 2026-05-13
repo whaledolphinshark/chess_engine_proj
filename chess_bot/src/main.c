@@ -86,6 +86,39 @@ void get_json_data(const char *start, const char *end, const char *name, char *v
     value[size - 1] = '\0';
 }
 
+void remove_quotes(char **data, int *new_len){
+    if (data == NULL || *data == NULL){
+        fprintf(stderr, "passed in null pointer");
+        exit(EXIT_FAILURE);
+    }
+
+    int i = 0;
+    int len = 1;
+    int decrement = 0;
+    while ((*data)[i] != '\0'){
+        if ((*data)[i] == '\"'){
+            decrement++;
+            i++;
+            continue;
+        }
+
+        (*data)[i - decrement] = (*data)[i];
+        len++;
+        i++;
+    }
+    (*data)[len - 1] = '\0';
+
+    *data = realloc(*data, sizeof(char) * len);
+    if (*data == NULL){
+        fprintf(stderr, "realloc() failed");
+        exit(EXIT_FAILURE);
+    }
+
+    if (new_len != NULL){
+        *new_len = len - 1;
+    }
+}
+
 void append_contents(char **data, char *contents, size_t content_len, size_t *data_len, size_t *data_size){
     if (data == NULL || *data == NULL || contents == NULL || data_len == NULL || data_size == NULL){
         fprintf(stderr, "passed in null pointer");
@@ -95,16 +128,16 @@ void append_contents(char **data, char *contents, size_t content_len, size_t *da
     const size_t new_len = *data_len == 0 ? content_len + 1 : *data_len + content_len;
     if (new_len > *data_size){
         *data_size = new_len;
-        *data = realloc(*data, new_len);
+        *data = realloc(*data, sizeof(char) * new_len);
         if (*data == NULL){
             fprintf(stderr, "realloc() failed");
             exit(EXIT_FAILURE);
         }
     }
 
-    memcpy(&(*data[*data_len]), contents, content_len);
-    *data[new_len] = '\0';
-    *data_len = new_len;
+    memcpy(*data + *data_len, contents, content_len);
+    (*data)[new_len] = '\0';
+    *data_len = new_len - 1;
 }
 
 int count_moves(char *moves){
@@ -176,6 +209,7 @@ size_t board_event_callback(void *contents, size_t size, size_t nmemb, void *use
                 i++;
                 continue;
             }
+            remove_quotes(&val, NULL);
             const int num_moves = count_moves(val);
             if (num_moves > response->moves_made){
                 const _color last_move = num_moves % 2 == 0 ? WHITE : BLACK;
@@ -355,14 +389,8 @@ size_t event_stream_callback(void *contents, size_t size, size_t nmemb, void *us
                 i++;
                 continue;
             }
-            int j = 1;
-            int id_length = 0;
-            while (val[j] != '\"'){
-                val[j - 1] = val[j];
-                j++;
-                id_length++;
-            }
-            val[j] = '\0';
+            int id_length;
+            remove_quotes(&val, &id_length);
             args.id = val;
             args.id_length = id_length;
 
