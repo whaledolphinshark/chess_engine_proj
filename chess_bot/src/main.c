@@ -263,6 +263,9 @@ size_t board_event_callback(void *contents, size_t size, size_t nmemb, void *use
                     }
                     sprintf(url, "https://lichess.org/api/board/game/%s/move/%s", response->id, move_uci);
 
+                    free(move_uci);
+                    free(url);
+
                     curl_easy_setopt(curl, CURLOPT_URL, url);
                     curl_easy_setopt(curl, CURLOPT_POST, 1L);
                     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
@@ -318,6 +321,8 @@ void *play_game(void *args){
             exit(EXIT_FAILURE);
         }
         sprintf(url, "https://lichess.org/api/board/game/stream/%s", id);
+
+        free(url);
 
         curl_easy_setopt(curl, CURLOPT_URL, url);
         curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
