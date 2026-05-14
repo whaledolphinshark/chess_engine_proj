@@ -30,13 +30,13 @@ typedef struct{
     char *data;
     size_t size;
     int length;
-    int moves_made;
     _color color;
     _board *board;
     _search_context *context;
     _search_stats *stats;
     char *id;
-    int id_length
+    int id_length;
+    int game_end;
 }_board_stream_response;
 
 void get_json_data(const char *start, const char *end, const char *name, char *value){
@@ -93,29 +93,24 @@ void remove_quotes(char **data, int *new_len){
     }
 
     int i = 0;
-    int len = 1;
-    int decrement = 0;
+    int len = 0;
     while ((*data)[i] != '\0'){
-        if ((*data)[i] == '\"'){
-            decrement++;
-            i++;
-            continue;
+        if ((*data)[i] != '\"'){
+            (*data)[len] = (*data)[i];
+            len++;
         }
-
-        (*data)[i - decrement] = (*data)[i];
-        len++;
         i++;
     }
-    (*data)[len - 1] = '\0';
+    (*data)[len] = '\0';
 
-    *data = realloc(*data, sizeof(char) * len);
+    *data = realloc(*data, sizeof(char) * (len + 1));
     if (*data == NULL){
         fprintf(stderr, "realloc() failed");
         exit(EXIT_FAILURE);
     }
 
     if (new_len != NULL){
-        *new_len = len - 1;
+        *new_len = len;
     }
 }
 
@@ -189,6 +184,48 @@ _move get_last_move(char *moves, _board *board){
     return move;
 }
 
+void post_move(const _move move, char *game_id, int game_id_len){
+    CURL *curl = curl_easy_init();
+    if (curl != NULL){
+        struct curl_slist *headers = curl_slist_append(NULL, "Authorization: Bearer YOUR_API_TOKEN");
+        
+        // make url
+        char *move_uci = malloc(sizeof(char) * 6);
+        if (move_uci == NULL){
+            fprintf(stderr, "malloc() failed");
+            exit(EXIT_FAILURE);
+        }
+        mv_move_to_uci(move, move_uci);
+        const int move_length = move.promotion == NONE ? 4 : 5;
+        char *url = malloc(sizeof(char) * (41 + game_id_len + move_length + 1));
+        if (url == NULL){
+            fprintf(stderr, "malloc() failed");
+            exit(EXIT_FAILURE);
+        }
+        sprintf(url, "https://lichess.org/api/board/game/%s/move/%s", game_id, move_uci);
+
+        free(move_uci);
+        free(url);
+
+        curl_easy_setopt(curl, CURLOPT_URL, url);
+        curl_easy_setopt(curl, CURLOPT_POST, 1L);
+        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+
+        CURLcode result = curl_easy_perform(curl);
+        if (result != CURLE_OK){
+            fprintf(stderr, "Request failed: %s\n", curl_easy_strerror(result));
+            exit(EXIT_FAILURE);
+        }
+
+        curl_slist_free_all(headers);
+        curl_easy_cleanup(curl);
+    }
+    else{
+        fprintf(stderr, "curl_easy_init() failed");
+        exit(EXIT_FAILURE);
+    }
+}
+
 size_t board_event_callback(void *contents, size_t size, size_t nmemb, void *userp){
     const size_t content_len = size * nmemb;
     _board_stream_response *response = (_board_stream_response *)userp;
@@ -200,9 +237,25 @@ size_t board_event_callback(void *contents, size_t size, size_t nmemb, void *use
     // check for responses  
     while (i < response->length){
         if (response->data[i] == '\n'){
-            // get moves
             char *val = NULL;
             const char *end = response->data + i;
+            // check status
+            get_json_data(start, end, "\"status\"", val);
+            if (val == NULL){
+                start = response->data + i + 1;
+                i++;
+                continue;
+            }
+            if (strcmp(val, "\"started\"") != 0){
+                // game ended
+                free(val);
+                response->game_end = 1;
+                return 0;
+            }
+            free(val);
+            val = NULL;
+
+            // get moves
             get_json_data(start, end, "\"moves\"", val);
             if (val == NULL){
                 start = response->data + i + 1;
@@ -211,79 +264,40 @@ size_t board_event_callback(void *contents, size_t size, size_t nmemb, void *use
             }
             remove_quotes(&val, NULL);
             const int num_moves = count_moves(val);
-            if (num_moves > response->moves_made){
-                const _color last_move = num_moves % 2 == 0 ? WHITE : BLACK;
-                const _color my_color = response->color;
-                // check if opponent made last move
-                if (last_move == my_color){
-                    start = response->data + i + 1;
-                    i++;
-                    continue;
-                }
-
-                // play opponent move on board
-                const _move opp_move = get_last_move(val, response->board);
-                cb_make_move(response->board, opp_move);
-                free(val);
-                val = NULL;
-
-                // get time
-                get_json_data(start, end, my_color == WHITE ? "\"wtime\"" : "\"btime\"", val);
-                if (val == NULL){
-                    start = response->data + i + 1;
-                    i++;
-                    continue;
-                }
-                const int ms = atoi(val);
-                const int seconds = ms / 1000;
-                free(val);
-                val = NULL;
-
-                // then play my move
-                const _move move = se_search(response->board, 6, seconds < 6 ? seconds : 6, response->context, response->stats);
-                cb_make_move(response->board, move);
-
-                // tell server
-                CURL *curl = curl_easy_init();
-                if (curl != NULL){
-                    struct curl_slist *headers = curl_slist_append(NULL, "Authorization: Bearer YOUR_API_TOKEN");
-
-                    // make url
-                    char *move_uci = malloc(sizeof(char) * 6);
-                    if (move_uci == NULL){
-                        fprintf(stderr, "malloc() failed");
-                        exit(EXIT_FAILURE);
-                    }
-                    mv_move_to_uci(move, move_uci);
-                    const int move_length = move.promotion == NONE ? 4 : 5;
-                    char *url = malloc(sizeof(char) * (41 + response->id_length + move_length + 1));
-                    if (url == NULL){
-                        fprintf(stderr, "malloc() failed");
-                        exit(EXIT_FAILURE);
-                    }
-                    sprintf(url, "https://lichess.org/api/board/game/%s/move/%s", response->id, move_uci);
-
-                    free(move_uci);
-                    free(url);
-
-                    curl_easy_setopt(curl, CURLOPT_URL, url);
-                    curl_easy_setopt(curl, CURLOPT_POST, 1L);
-                    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-
-                    CURLcode result = curl_easy_perform(curl);
-                    if (result != CURLE_OK) {
-                        fprintf(stderr, "Request failed: %s\n", curl_easy_strerror(result));
-                        exit(EXIT_FAILURE);
-                    }
-
-                    curl_slist_free_all(headers);
-                    curl_easy_cleanup(curl);
-                }
+            free(val);
+            val = NULL;
+            const _color last_move = num_moves % 2 == 0 ? BLACK : WHITE;
+            // check if opponent made last move
+            if (last_move == response->color){
+                start = response->data + i + 1;
+                i++;
+                continue;
             }
-            else{
-                fprintf(stderr, "curl_easy_init() failed");
-                exit(EXIT_FAILURE);
+
+            // play opponent move on board
+            const _move opp_move = get_last_move(val, response->board);
+            cb_make_move(response->board, opp_move);
+            free(val);
+            val = NULL;
+
+            // get time
+            get_json_data(start, end, response->color == WHITE ? "\"wtime\"" : "\"btime\"", val);
+            if (val == NULL){
+                start = response->data + i + 1;
+                i++;
+                continue;
             }
+            const int ms = atoi(val);
+            const int seconds = ms / 1000;
+            free(val);
+            val = NULL;
+
+            // then play my move
+            const _move move = se_search(response->board, 6, seconds < 6 ? seconds : 6, response->context, response->stats);
+            cb_make_move(response->board, move);
+
+            // tell server
+            post_move(move, response->id, response->id_length);
 
             start = response->data + i + 1;
         }
@@ -302,7 +316,7 @@ void *play_game(void *args){
     _search_context context;
     _search_stats stats;
     se_init_search_context(&context);
-    _board_stream_response response = {NULL, 0, 0, 0, color, cb_create_board(), &context, &stats, id, id_length};
+    _board_stream_response response = {NULL, 0, 0, color, cb_create_board(), &context, &stats, id, id_length};
     response.data = malloc(1);
     if (response.data == NULL){
         fprintf(stderr, "malloc() failed");
@@ -311,6 +325,14 @@ void *play_game(void *args){
 
     // listen to stream
     CURL *curl = curl_easy_init();
+    // if we are white make move
+    if (color == WHITE){
+        const _move move = se_search(response.board, 6, 6, response.context, response.stats);
+        cb_make_move(response.board, move);
+        post_move(move, id, id_length);
+    }
+
+    // listen to stream
     if (curl != NULL){
         struct curl_slist *headers = curl_slist_append(NULL, "Authorization: Bearer YOUR_API_TOKEN");
 
@@ -331,7 +353,7 @@ void *play_game(void *args){
         curl_easy_setopt(curl, CURLOPT_TCP_KEEPALIVE, 1L);
 
         CURLcode result = curl_easy_perform(curl);
-        if (result != CURLE_OK) {
+        if (result != CURLE_OK && response.game_end != 1) {
             fprintf(stderr, "Request failed: %s\n", curl_easy_strerror(result));
             exit(EXIT_FAILURE);
         }
