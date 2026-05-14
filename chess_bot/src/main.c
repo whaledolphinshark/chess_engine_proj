@@ -15,7 +15,7 @@
 typedef struct{
     char *data;
     size_t size;
-    int length;
+    size_t length;
     int games_accepted;
     pthread_t games[MAX_GAMES_PLAYED];
 }_event_stream_response;
@@ -130,8 +130,8 @@ void append_contents(char **data, char *contents, size_t content_len, size_t *da
         }
     }
 
-    memcpy(*data + *data_len, contents, content_len);
-    (*data)[new_len] = '\0';
+    memcpy(*data + *data_len, contents, sizeof(char) * content_len);
+    (*data)[new_len - 1] = '\0';
     *data_len = new_len - 1;
 }
 
@@ -380,9 +380,8 @@ size_t event_stream_callback(void *contents, size_t size, size_t nmemb, void *us
     _event_stream_response *response = (_event_stream_response *)userp;
 
     int i = response->length;
-    append_contents(&response->data, contents, content_len, (size_t *)(&response->length), &response->size);
+    append_contents(&response->data, contents, content_len, &response->length, &response->size);
     char *start = response->data;
-
     // check for responses
     while (i < response->length){
         // found full response
@@ -451,7 +450,7 @@ size_t event_stream_callback(void *contents, size_t size, size_t nmemb, void *us
         const int remaining_length = response->length - (start - response->data);
         response->length = remaining_length;
         if (remaining_length != 0){
-            memmove(response->data, start, sizeof(char) * remaining_length);
+            memmove(response->data, start, sizeof(char) * (remaining_length + 1));
         }
     }
 
@@ -474,7 +473,7 @@ int main(){
     CURL *curl = curl_easy_init();
 
     if (curl != NULL){
-        struct curl_slist *headers = curl_slist_append(NULL, "Authorization: Bearer");
+        struct curl_slist *headers = curl_slist_append(NULL, "Authorization: Bearer ");
 
         curl_easy_setopt(curl, CURLOPT_URL, "https://lichess.org/api/stream/event");
         curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
