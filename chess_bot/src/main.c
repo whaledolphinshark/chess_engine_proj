@@ -40,7 +40,7 @@ typedef struct{
 }_board_stream_response;
 
 void get_json_data(const char *start, const char *end, const char *name, char *value){
-    if (start == NULL || end == NULL || name == NULL || value == NULL){
+    if (start == NULL || end == NULL || name == NULL){
         fprintf(stderr, "passed in null pointer");
         exit(EXIT_FAILURE);
     }
@@ -205,11 +205,13 @@ void post_move(const _move move, char *game_id, int game_id_len){
         sprintf(url, "https://lichess.org/api/board/game/%s/move/%s", game_id, move_uci);
 
         free(move_uci);
-        free(url);
 
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, "");
         curl_easy_setopt(curl, CURLOPT_URL, url);
         curl_easy_setopt(curl, CURLOPT_POST, 1L);
         curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+
+        free(url);
 
         CURLcode result = curl_easy_perform(curl);
         if (result != CURLE_OK){
@@ -344,16 +346,16 @@ void *play_game(void *args){
         }
         sprintf(url, "https://lichess.org/api/board/game/stream/%s", id);
 
-        free(url);
-
         curl_easy_setopt(curl, CURLOPT_URL, url);
         curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, board_event_callback);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&response);
         curl_easy_setopt(curl, CURLOPT_TCP_KEEPALIVE, 1L);
 
+        free(url);
+
         CURLcode result = curl_easy_perform(curl);
-        if (result != CURLE_OK && response.game_end != 1) {
+        if (response.game_end != 1) {
             fprintf(stderr, "Request failed: %s\n", curl_easy_strerror(result));
             exit(EXIT_FAILURE);
         }
@@ -391,6 +393,9 @@ size_t event_stream_callback(void *contents, size_t size, size_t nmemb, void *us
             const char *end = response->data + i;
             get_json_data(start, end, "\"type\"", val);
             if (val == NULL || strcmp(val, "\"gameStart\"") != 0){
+                if (val != NULL){
+                    free(val);
+                }
                 start = response->data + i + 1;
                 i++;
                 continue;
@@ -423,7 +428,6 @@ size_t event_stream_callback(void *contents, size_t size, size_t nmemb, void *us
 
             // start a thread for this game
             pthread_t thread_id;
-
             if (pthread_create(&thread_id, NULL, play_game, &args) != 0){
                 fprintf(stderr, "failed to create thread");
                 exit(EXIT_FAILURE);
@@ -435,15 +439,20 @@ size_t event_stream_callback(void *contents, size_t size, size_t nmemb, void *us
             if (response->games_accepted >= MAX_GAMES_PLAYED){
                 return 0;
             }
+
+            start = response->data + i + 1;
         }
+
         i++;
     }
 
     // move data
     if (start != response->data){
         const int remaining_length = response->length - (start - response->data);
-        memmove(response->data, start, sizeof(char) * remaining_length);
         response->length = remaining_length;
+        if (remaining_length != 0){
+            memmove(response->data, start, sizeof(char) * remaining_length);
+        }
     }
 
     return content_len;
@@ -456,6 +465,7 @@ int main(){
         fprintf(stderr, "malloc() failed");
         return 1;
     }
+    response.data[0] = '\0';
     response.size = 0;
     response.length = 0;
     response.games_accepted = 0;
@@ -464,7 +474,7 @@ int main(){
     CURL *curl = curl_easy_init();
 
     if (curl != NULL){
-        struct curl_slist *headers = curl_slist_append(NULL, "Authorization: Bearer YOUR_API_TOKEN");
+        struct curl_slist *headers = curl_slist_append(NULL, "Authorization: Bearer");
 
         curl_easy_setopt(curl, CURLOPT_URL, "https://lichess.org/api/stream/event");
         curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
@@ -473,7 +483,7 @@ int main(){
         curl_easy_setopt(curl, CURLOPT_TCP_KEEPALIVE, 1L);
 
         CURLcode result = curl_easy_perform(curl);
-        if (result != CURLE_OK) {
+        if (response.games_accepted < MAX_GAMES_PLAYED) {
             fprintf(stderr, "Request failed: %s\n", curl_easy_strerror(result));
         }
 
@@ -482,9 +492,10 @@ int main(){
     }
 
     free(response.data);
-    for (int i = 0; i < MAX_GAMES_PLAYED; i++){
+    for (int i = 0; i < response.games_accepted; i++){
         pthread_join(response.games[i], NULL);
     }
     curl_global_cleanup();
+
     return 0;
 }
