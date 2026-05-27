@@ -151,6 +151,10 @@ int main(int argc, char *argv[]){
     int depth = 5;
     char *arg_s = NULL;
     char *arg_d = NULL;
+    if (argc <= 1){
+        fprintf(stderr, ERROR_MSG);
+        exit(EXIT_FAILURE);
+    }
     read_args(argc, argv, &arg_s, &arg_d);
     if (arg_s != NULL){
         char *end_ptr;
@@ -174,14 +178,13 @@ int main(int argc, char *argv[]){
     }
 
     init_chess_engine();
-    _search_context context;
-    se_init_search_context(&context);
+    _search_context *context = se_init_search_context();
     _board *board = cb_create_board();
     cb_fen_to_board(board, START_FEN);
     print_game_state(board);
 
     if (side == board->turn){
-        bot_move(board, &context, depth);
+        bot_move(board, context, depth);
     }
 
     char input[MAX_MOVE_BUFFER_SIZE];
@@ -209,7 +212,7 @@ int main(int argc, char *argv[]){
         }
 
         if (board->game_state == ONGOING){
-            int success = bot_move(board, &context, depth);
+            int success = bot_move(board, context, depth);
             if (success == 0){
                 fprintf(stderr, "error: invalid move played\n");
                 cb_destroy_board(board);
@@ -218,7 +221,7 @@ int main(int argc, char *argv[]){
         }
     }
 
-    se_destroy_search_context(&context);
+    se_destroy_search_context(context);
     cb_destroy_board(board);
     return 0;
 }

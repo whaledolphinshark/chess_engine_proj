@@ -8,7 +8,6 @@
 #include "chess_engine/chess_types.h"
 #include "chess_engine/moves.h"
 #include "chess_engine/board.h"
-#include "chess_engine/search.h"
 #include "utils/bitboard_util.h"
 #include "chess_engine/transposition_table.h"
 

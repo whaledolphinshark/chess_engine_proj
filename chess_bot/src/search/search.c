@@ -218,7 +218,11 @@ _move se_search(_board *board, int depth, double time, _search_context *context,
     return entry->best_move;
 }
 
-void se_init_search_context(_search_context *context){
+_search_context *se_init_search_context(){
+    _search_context *context = malloc(sizeof(_search_context));
+    if (context == NULL){
+        eh_die("malloc() failed");
+    }
     context->table = tt_create_transposition_table(sizeof(_tt_search_entry));
     for (int i = 0; i < 12; i++){
         for (int j = 0; j < 64; j++){
@@ -227,8 +231,11 @@ void se_init_search_context(_search_context *context){
             }
         }
     }
+
+    return context;
 }
 
 void se_destroy_search_context(_search_context *context){
     tt_destroy_transposition_table(context->table);
+    free(context);
 }

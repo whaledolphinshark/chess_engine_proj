@@ -33,7 +33,7 @@ typedef struct _search_context{
 } _search_context;
 
 _move se_search(_board *board, int depth, double time, _search_context *context, _search_stats *stats);
-void se_init_search_context(_search_context *context);
+_search_context *se_init_search_context();
 void se_destroy_search_context(_search_context *context);
 
 #endif
