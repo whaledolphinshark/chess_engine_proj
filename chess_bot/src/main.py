@@ -2,7 +2,7 @@ import requests
 import json
 from threading import Thread
 from typing import NewType
-from ctypes import CDLL, Structure, POINTER, c_int, c_char, byref
+from ctypes import CDLL, Structure, POINTER, c_int, c_char, c_char_p, c_double, byref
 from pathlib import Path
 import sys
 import random
@@ -36,9 +36,9 @@ lib.cb_destroy_board.argtypes = [POINTER(board)]
 lib.mv_move_to_uci.restype = None
 lib.mv_move_to_uci.argtypes = [move, POINTER(c_char)]
 lib.mv_uci_to_move.restype = move
-lib.mv_uci_to_move.argtypes = [POINTER(c_char), POINTER(board)]
+lib.mv_uci_to_move.argtypes = [c_char_p, POINTER(board)]
 lib.se_search.restype = move
-lib.se_search.argtypes = [POINTER(board), c_int, c_int, POINTER(search_context), POINTER(search_stats)]
+lib.se_search.argtypes = [POINTER(board), c_int, c_double, POINTER(search_context), POINTER(search_stats)]
 lib.se_init_search_context.restype = POINTER(search_context)
 lib.se_init_search_context.argtypes = []
 lib.se_destroy_search_context.restype = None
@@ -51,7 +51,7 @@ def post_move(id: str, move: move):
     move_uci = (c_char * 6)()
     lib.mv_move_to_uci(move, move_uci)
 
-    url = f"https://lichess.org/api/bot/game/{id}/{move_uci.value.decode()}"
+    url = f"https://lichess.org/api/bot/game/{id}/move/{move_uci.value.decode()}"
     headers = {"Authorization" : f"Bearer {api_token}"}
     response = requests.post(url=url, headers=headers)
     response.raise_for_status()
@@ -59,15 +59,16 @@ def post_move(id: str, move: move):
 def play_game(id: str, my_color: bool):
     # white = true, black = false
     game_board: board_ptr = lib.cb_create_board()
-    context: search_context = lib.se_init_search_context()
-    stats: search_stats = search_stats()
+    context: context_ptr = lib.se_init_search_context()
 
-    url = f"https://lichess.org/api/board/game/stream/{id}"
+    url = f"https://lichess.org/api/bot/game/stream/{id}"
     headers = {"Authorization" : f"Bearer {api_token}"}
     with requests.get(url=url, headers=headers, stream=True) as r:
+        print(r.status_code)
         r.raise_for_status()
 
         for line in r.iter_lines():
+            print(f"response: {line}")
             if not line:
                 continue
 
@@ -78,9 +79,10 @@ def play_game(id: str, my_color: bool):
             # check status
             if event["status"] != "started":
                 break
-
-            moves: list[str] = event["moves"].split(" ")
-            print(moves)
+            
+            moves_str: str = event["moves"]
+            moves: list[str] = moves_str.split(" ") if moves_str else []
+            print(f"moves: {moves}")
             last_move_color: bool = len(moves) % 2 == 1
             if last_move_color != my_color:
                 # make last move
@@ -92,12 +94,18 @@ def play_game(id: str, my_color: bool):
                 seconds: int = event["wtime" if my_color else "btime"] // 1000
 
                 # make move
-                next_move: move = lib.se_search(game_board, 6 if seconds > 6 else seconds, byref(context), byref(stats))
+                next_move: move = lib.se_search(game_board, 6, 6.0 if seconds > 6 else seconds, context, None)
+                
+                # debug
+                move_uci = (c_char * 6)()
+                lib.mv_move_to_uci(move, move_uci)
+                print(f"making move: {move_uci.value.decode()}")
+
                 lib.cb_make_move(game_board, next_move)
                 post_move(id, next_move)
 
-    lib.destroy_board(game_board)
-    lib.destroy_search_context(byref(context))
+    lib.cb_destroy_board(game_board)
+    lib.se_destroy_search_context(context)
 
 if __name__ == "__main__":
     env_path = Path(__file__).resolve().parent.parent / "variables.env"
