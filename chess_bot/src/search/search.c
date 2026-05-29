@@ -183,14 +183,16 @@ static int search(_board *board, int depth, int alpha, int beta, int pv, _search
 }
 
 _move se_search(_board *board, int depth, double time, _search_context *context, _search_stats *stats){
-    if (board == NULL || stats == NULL){
+    if (board == NULL || context == NULL){
         eh_die("passed in null pointer");
-    }
-    if (context->table == NULL){
-        eh_die("context not initialized");
     }
     if (tt_get_item_size(context->table) != sizeof(_tt_search_entry)){
         eh_die("context initialized incorrectly");
+    }
+
+    _search_stats placeholder = {0, 0, 0, 0, 0};
+    if (stats == NULL){
+        stats = &placeholder;
     }
 
     int i = 1;
