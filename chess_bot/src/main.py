@@ -2,7 +2,7 @@ import requests
 import json
 from threading import Thread
 from typing import NewType
-from ctypes import CDLL, Structure, POINTER, c_int, c_char, c_char_p, c_double, byref
+from ctypes import CDLL, Structure, POINTER, c_int, c_char, c_char_p, c_double, create_string_buffer
 from pathlib import Path
 import sys
 import random
@@ -14,7 +14,12 @@ class board(Structure):
     pass
 
 class move(Structure):
-    pass
+    _fields_ = [("to", c_int),
+                ("from", c_int),
+                ("piece", c_int),
+                ("capture", c_int),
+                ("promotion", c_int),
+                ("special_move", c_int)]
 
 class search_context(Structure):
     pass
@@ -48,7 +53,7 @@ api_token: str = ""
 my_name: str = ""
 
 def post_move(id: str, move: move):
-    move_uci = (c_char * 6)()
+    move_uci = create_string_buffer("123456".encode('utf-8'))
     lib.mv_move_to_uci(move, move_uci)
 
     url = f"https://lichess.org/api/bot/game/{id}/move/{move_uci.value.decode()}"
@@ -87,18 +92,20 @@ def play_game(id: str, my_color: bool):
             if last_move_color != my_color:
                 # make last move
                 if len(moves) > 0:
-                    last_move: move = lib.mv_uci_to_move(moves[-1].encode('utf-8'), game_board)
+                    print(moves[-1])
+                    move_uci = create_string_buffer(moves[-1].encode('utf-8'))
+                    last_move: move = lib.mv_uci_to_move(move_uci, game_board)
                     lib.cb_make_move(game_board, last_move)
 
                 # get time
                 seconds: int = event["wtime" if my_color else "btime"] // 1000
 
                 # make move
-                next_move: move = lib.se_search(game_board, 6, 6.0 if seconds > 6 else seconds, context, None)
+                next_move: move = lib.se_search(game_board, 6, 6 if seconds > 6 else seconds, context, None)
                 
                 # debug
-                move_uci = (c_char * 6)()
-                lib.mv_move_to_uci(move, move_uci)
+                move_uci = create_string_buffer("123456".encode('utf-8'))
+                lib.mv_move_to_uci(next_move, move_uci)
                 print(f"making move: {move_uci.value.decode()}")
 
                 lib.cb_make_move(game_board, next_move)
