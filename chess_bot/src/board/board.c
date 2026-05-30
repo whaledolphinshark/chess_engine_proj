@@ -53,7 +53,7 @@ void cb_calculate_game_state(_board *restrict board, const int has_moves){
 
 _board *cb_create_board(){
     if (is_chess_engine_ready() != 1){
-        eh_die("cb_init_chess_board() not called");
+        eh_die("init_chess_board() not called");
     }
     _board *board = (_board *)malloc(sizeof(_board));
     if (board == NULL){
@@ -204,32 +204,16 @@ void cb_make_move(_board *restrict board, const _move move){
     // check castling rights
     if ((board->castling_rights & 3UL) != 0){
         board->zobrist_hash ^= castling_keys[board->castling_rights];
-        if (board->piece_array[4] != W_KING){
-            board->castling_rights &= ~3UL;
-        }
-        else{
-            if(board->piece_array[0] != W_ROOK){
-                board->castling_rights &= ~1UL;
-            }
-            if (board->piece_array[7] != W_ROOK){
-                board->castling_rights &= ~2UL;
-            }
-        }
+        board->castling_rights &= ~((board->piece_array[4] != W_KING) * 3UL);
+        board->castling_rights &= ~((board->piece_array[0] != W_ROOK) * 1UL);
+        board->castling_rights &= ~((board->piece_array[7] != W_ROOK) * 2UL);
         board->zobrist_hash ^= castling_keys[board->castling_rights];
     }
     if ((board->castling_rights & 12UL) != 0){
         board->zobrist_hash ^= castling_keys[board->castling_rights];
-        if (board->piece_array[60] != B_KING){
-            board->castling_rights &= ~12UL;
-        }
-        else{
-            if(board->piece_array[56] != B_ROOK){
-                board->castling_rights &= ~4UL;
-            }
-            if (board->piece_array[63] != B_ROOK){
-                board->castling_rights &= ~8UL;
-            }
-        }
+        board->castling_rights &= ~((board->piece_array[60] != B_KING) * 12UL);
+        board->castling_rights &= ~((board->piece_array[56] != B_ROOK) * 4UL);
+        board->castling_rights &= ~((board->piece_array[63] != B_ROOK) * 8UL);
         board->zobrist_hash ^= castling_keys[board->castling_rights];
     }
 

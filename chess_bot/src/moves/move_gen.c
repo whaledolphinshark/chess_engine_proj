@@ -66,25 +66,17 @@ static int check_castle(_board *restrict board, const _color side){
         safe_squares[2] = cb_is_square_attacked(5, board, board->board, side);
         safe_squares[3] = cb_is_square_attacked(6, board, board->board, side);
         // left castle
-        if ((board->castling_rights & 1UL) != 0 && safe_squares[0] == 0 && safe_squares[1] == 0 && (board->board & 14UL) == 0){
-            code++;
-        }
+        code += ((board->castling_rights & 1UL) != 0 && safe_squares[0] == 0 && safe_squares[1] == 0 && (board->board & 14UL) == 0);
         // right castle
-        if ((board->castling_rights & 2UL) != 0 && safe_squares[2] == 0 && safe_squares[3] == 0 && (board->board & 96UL) == 0){
-            code += 2;
-        }
+        code += 2 * ((board->castling_rights & 2UL) != 0 && safe_squares[2] == 0 && safe_squares[3] == 0 && (board->board & 96UL) == 0);
     }
     else{
         safe_squares[0] = cb_is_square_attacked(58, board, board->board, side);
         safe_squares[1] = cb_is_square_attacked(59, board, board->board, side);
         safe_squares[2] = cb_is_square_attacked(61, board, board->board, side);
         safe_squares[3] = cb_is_square_attacked(62, board, board->board, side);
-        if ((board->castling_rights & 4UL) != 0 && safe_squares[0] == 0 && safe_squares[1] == 0 && (board->board & 1008806316530991104UL) == 0){
-            code++;
-        }
-        if ((board->castling_rights & 8UL) != 0 && safe_squares[2] == 0 && safe_squares[3] == 0 && (board->board & 6917529027641081856UL) == 0){
-            code += 2;
-        }
+        code += ((board->castling_rights & 4UL) != 0 && safe_squares[0] == 0 && safe_squares[1] == 0 && (board->board & 1008806316530991104UL) == 0);
+        code += 2 * ((board->castling_rights & 8UL) != 0 && safe_squares[2] == 0 && safe_squares[3] == 0 && (board->board & 6917529027641081856UL) == 0);
     }
 
     return code;
@@ -147,12 +139,11 @@ static uint64_t get_legal_non_king_moves_in_check(_board *restrict board, const 
             potential_attack_ray = ray & (UINT64_MAX << potential_attacker_square);
         }
 
-        if (((1UL << potential_attacker_square) & sliders[i % 2]) != 0){
-            non_king_moves_in_check |= potential_attack_ray;
-            num_attackers += 1;
-            if (num_attackers > 1){
-                return 0;
-            }
+        const uint64_t cond = (((1UL << potential_attacker_square) & sliders[i % 2]) != 0);
+        non_king_moves_in_check |= (cond * potential_attack_ray);
+        num_attackers += cond;
+        if (num_attackers > 1){
+            return 0;
         }
     }
 
@@ -279,7 +270,6 @@ static uint64_t get_legal_king_moves(_board *restrict board, const int king_squa
         const int square = bb_pop_lsb(&potential_danger_squares) - 1;
         if (cb_is_square_attacked(square, board, occupied, board->turn) == 1){
             danger_squares |= (1UL << square);
-            // i can make it quicker i think
         }
     }
 
@@ -358,9 +348,7 @@ void mv_generate_moves(_board *restrict board, _move move_buffer[restrict MAX_MO
     }
 
     // pawn
-    if (en_passant_checker == 1){
-        non_king_moves_in_check |= (1UL << board->en_passant_square);
-    }
+    non_king_moves_in_check |= ((en_passant_checker == 1) * (1UL << board->en_passant_square));
     while (pawns != 0){
         const int square = bb_pop_lsb(&pawns) - 1;
         const uint64_t moves = get_semi_legal_pawn_moves(board, square) & pin_ray_buffer[square] & non_king_moves_in_check;
@@ -463,9 +451,7 @@ int mv_has_moves(_board *restrict board){
     }
 
     // pawn
-    if (en_passant_checker == 1){
-        non_king_moves_in_check |= (1UL << board->en_passant_square);
-    }
+    non_king_moves_in_check |= ((en_passant_checker == 1) * (1UL << board->en_passant_square));
     while (pawns != 0){
         const int square = bb_pop_lsb(&pawns) - 1;
         const uint64_t moves = get_semi_legal_pawn_moves(board, square) & pin_ray_buffer[square] & non_king_moves_in_check;
