@@ -87,7 +87,6 @@ def play_game(id: str, my_color: bool):
             
             moves_str: str = event["moves"]
             moves: list[str] = moves_str.split(" ") if moves_str else []
-            print(f"moves: {moves}")
             last_move_color: bool = len(moves) % 2 == 1
             if last_move_color != my_color:
                 # make last move
@@ -101,6 +100,7 @@ def play_game(id: str, my_color: bool):
                 seconds: int = event["wtime" if my_color else "btime"] // 1000
 
                 # make move
+                print("thinking...")
                 next_move: move = lib.se_search(game_board, 6, 6 if seconds > 6 else seconds, context, None)
                 
                 # debug
@@ -113,6 +113,7 @@ def play_game(id: str, my_color: bool):
 
     lib.cb_destroy_board(game_board)
     lib.se_destroy_search_context(context)
+    print(f"finished game: {id}")
 
 if __name__ == "__main__":
     env_path = Path(__file__).resolve().parent.parent / "variables.env"
