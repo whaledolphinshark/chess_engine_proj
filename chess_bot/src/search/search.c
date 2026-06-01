@@ -24,32 +24,21 @@ static void update_history(const int bonus, const int index, _move moves[restric
 
 static void order_moves(_board *restrict board, _move moves[restrict MAX_MOVES], int values[restrict MAX_MOVES], const int move_count, _search_context *restrict context){
     const uint64_t hash = board->zobrist_hash;
-    _move best_move = {0, 0, NONE, NONE, NONE, NORMAL};
+    _move hash_move = {0, 0, NONE, NONE, NONE, NORMAL};
     if (tt_contains_key(context->table, hash) == 1){
-        best_move = ((_tt_search_entry *)tt_get_item(context->table, hash))->best_move;
+        hash_move = ((_tt_search_entry *)tt_get_item(context->table, hash))->best_move;
     }
     
-    // int values[move_count];
-    for (int i = 0; i < move_count; i++){
-        values[i] = 0;
-        _move move = moves[i];
-        if (mv_moves_equal(best_move, move) == 1){
-            values[i] += 60000;
-        }
-        if (move.capture != NONE){
-            values[i] += piece_values[move.capture] - piece_values[move.piece] + 10000;
-        }
-        if (move.special_move == PROMOTION){
-            values[i] += 5000;
-        }
-        if (move.capture == NONE){
-            values[i] += context->history[move.piece][move.from][move.to];
-        }
-    }
-
     int temp_val;
     _move temp_move;
     for (int i = 0; i < move_count; i++){
+        values[i] = 0;
+        _move move = moves[i];
+        values[i] += (mv_moves_equal(hash_move, move) == 1) * 60000;
+        values[i] += (move.capture != NONE) * (piece_values[move.capture] - piece_values[move.piece] + 10000);
+        values[i] += (move.special_move == PROMOTION) * 5000;
+        values[i] += (move.capture == NONE) * context->history[move.piece][move.from][move.to];
+
         int j = i;
         while (j > 0 && values[j] > values[j - 1]){
             temp_val = values[j - 1];
