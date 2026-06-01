@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <time.h>
 
 #include "chess_engine/chess_types.h"
 #include "chess_engine/init_chess_engine.h"
@@ -11,7 +12,7 @@
 #include "alt_bot/alt_bot.h"
 
 #define DEPTH 6
-#define MAX_TIME 6
+#define MAX_TIME 0
 
 int main(){
     init_chess_engine();
@@ -60,6 +61,9 @@ int main(){
             total_games++;
             _search_context *context_1 = se_init_search_context();
             _search_context *context_2 = se_init_search_context();
+            double original_time = 0;
+            double alt_time = 0;
+            clock_t start, end;
             cb_fen_to_board(board, openings[i]);
             _color original_side;
             if ((board->turn == WHITE && j == 0) || (board->turn == BLACK && j == 1)){
@@ -70,11 +74,27 @@ int main(){
             }
             while (board->game_state == ONGOING){
                 _move move;
-                move = (j == 0 ? se_search(board, DEPTH, MAX_TIME, context_1, &stats_1) : alt_search(board, DEPTH, context_2, &stats_2));
+                start = clock();
+                move = (j == 0 ? se_search(board, DEPTH, MAX_TIME, context_1, &stats_1) : alt_search(board, DEPTH, MAX_TIME, context_2, &stats_2));
+                end = clock();
+                if (j == 0){
+                    original_time += ((double) (end - start)) / CLOCKS_PER_SEC;
+                }
+                else{
+                    alt_time += ((double) (end - start)) / CLOCKS_PER_SEC;;
+                }
                 gl_append_item(moves_list, &move);
                 cb_make_move(board, move);
                 if (board->game_state == ONGOING){
-                    move = (j == 0 ? alt_search(board, DEPTH, context_2, &stats_2) : se_search(board, DEPTH, MAX_TIME, context_1, &stats_1));
+                    start = clock();
+                    move = (j == 0 ? alt_search(board, DEPTH, MAX_TIME, context_2, &stats_2) : se_search(board, DEPTH, MAX_TIME, context_1, &stats_1));
+                    end = clock();
+                    if (j == 0){
+                        alt_time += ((double) (end - start)) / CLOCKS_PER_SEC;
+                    }
+                    else{
+                        original_time += ((double) (end - start)) / CLOCKS_PER_SEC;;
+                    }
                     gl_append_item(moves_list, &move);
                     cb_make_move(board, move);
                 }
@@ -97,8 +117,8 @@ int main(){
 
             printf("\nposition: %s, total games: %d, first mover: %s\n", openings[i], total_games, j == 0 ? "original" : "alt");
             printf("original wins: %d, alt wins: %d, draws: %d\n", original_wins, alt_wins, draws);
-            printf("original stats---researches: %d, research fail-lows: %d, nodes visited: %d, quiescent nodes visited: %d\n", stats_1.researches, stats_1.research_fail_low, stats_1.nodes_visited, stats_1.quiescent_nodes_visited);
-            printf("alt stats---researches: %d, research fail-lows: %d, nodes visited: %d, quiescent nodes visited: %d\n", stats_2.researches, stats_2.research_fail_low, stats_2.nodes_visited, stats_2.quiescent_nodes_visited);
+            printf("original stats---researches: %d, research fail-lows: %d, nodes visited: %d, quiescent nodes visited: %d, time taken: %f\n", stats_1.researches, stats_1.research_fail_low, stats_1.nodes_visited, stats_1.quiescent_nodes_visited, original_time);
+            printf("alt stats---researches: %d, research fail-lows: %d, nodes visited: %d, quiescent nodes visited: %d, time taken: %f\n", stats_2.researches, stats_2.research_fail_low, stats_2.nodes_visited, stats_2.quiescent_nodes_visited, alt_time);
             printf("moves played: ");
             for (int i = 0; i < gl_get_length(moves_list); i++){
                 mv_print_move(*(_move *)gl_access_item(moves_list, i), 0);
