@@ -23,8 +23,9 @@ int main(){
     // else crash
     char buffer[BUFFER_SIZE];
     while (fgets(buffer, sizeof(buffer), stdin) != NULL){
+        buffer[strcspn(buffer, "\n")] = '\0';
         // if stop then stop program
-        if (strcmp(buffer, "stop")){
+        if (strcmp(buffer, "stop") == 0){
             break;
         }
 
@@ -69,6 +70,7 @@ int main(){
                 fflush(stdout);
                 continue;
             }
+            // validate move
 
             cb_make_move(board, move);
             const _move response = se_search(board, 6, search_time, context, NULL);
