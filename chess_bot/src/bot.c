@@ -10,8 +10,23 @@
 
 #define BUFFER_SIZE 50
 
-int main(){
+int main(int argc, char *argv[]){
+    if (argc != 3){
+        fprintf(stderr, "Usage: %s <minimum depth> <maximum search time (seconds)>\n", argv[0]);
+        return 1;
+    }
     // get minimum depth and max search time
+    char *end_ptr;
+    const int min_depth = (int)strtol(argv[1], &end_ptr, 10);
+    if (end_ptr == argv[1] || *end_ptr != '\0'){
+        fprintf(stderr, "Usage: %s <minimum depth> <maximum search time (seconds)>\n", argv[0]);
+        return 1;
+    }
+    const int max_seconds = (int)strtol(argv[2], &end_ptr, 10);
+    if (end_ptr == argv[1] || *end_ptr != '\0'){
+        fprintf(stderr, "Usage: %s <minimum depth> <maximum search time (seconds)>\n", argv[0]);
+        return 1;
+    }
 
     init_chess_engine();
     _board *board = cb_create_board();
@@ -53,11 +68,11 @@ int main(){
             fflush(stdout);
             continue;
         }
-        const int search_time = 6 < seconds ? 6 : seconds;
+        const int search_time = max_seconds < seconds ? max_seconds : seconds;
 
 
         if (strcmp(move_uci, "null") == 0){
-            const _move move = se_search(board, 6, search_time, context, NULL);
+            const _move move = se_search(board, min_depth, search_time, context, NULL);
             cb_make_move(board, move);
             mv_move_to_uci(move, move_uci);
             printf("%s\n", move_uci);
@@ -70,10 +85,9 @@ int main(){
                 fflush(stdout);
                 continue;
             }
-            // validate move
 
             cb_make_move(board, move);
-            const _move response = se_search(board, 6, search_time, context, NULL);
+            const _move response = se_search(board, min_depth, search_time, context, NULL);
             cb_make_move(board, response);
             mv_move_to_uci(response, move_uci);
             printf("%s\n", move_uci);
