@@ -11,7 +11,7 @@
 #include "utils/list.h"
 #include "alt_bot/alt_bot.h"
 
-#define DEPTH 6
+#define DEPTH 8
 #define MAX_TIME 0
 
 int main(){
@@ -54,6 +54,8 @@ int main(){
     int alt_wins = 0;
     int draws = 0;
     int total_games = 0;
+    int original_total_time = 0;
+    int alt_total_time = 0;
     _list *moves_list = gl_create_list(sizeof(_move));
     for (int i = 0; i < 30; i++){
         for (int j = 0; j < 2; j++){
@@ -103,6 +105,9 @@ int main(){
                 }
             }
 
+            original_total_time += original_time;
+            alt_total_time += alt_time;
+
             if ((board->game_state == W_WIN && original_side == WHITE) || (board->game_state == B_WIN && original_side == BLACK)){
                 original_wins++;
             }
@@ -130,7 +135,7 @@ int main(){
         }
     }
 
-    printf("\ntotal games: %d, original wins: %d, alt wins: %d, draws: %d\n\n", total_games, original_wins, alt_wins, draws);
+    printf("\ntotal games: %d, original wins: %d, alt wins: %d, draws: %d, original total time: %d, alt total time: %d\n\n", total_games, original_wins, alt_wins, draws, original_total_time, alt_total_time);
 
     cb_destroy_board(board);
     gl_destroy_list(moves_list);
