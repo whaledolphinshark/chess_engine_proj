@@ -38,6 +38,7 @@ _move mv_init_move(_board *board, int from, int to, _piece promotion){
 }
 
 _move mv_uci_to_move(char *move_uci, _board *board){
+    _move fail = NULL_MOVE;
     int string_length = 0;
     _piece promotion = NONE;
     int from = 0;
@@ -47,21 +48,32 @@ _move mv_uci_to_move(char *move_uci, _board *board){
     }
 
     if (string_length != 4 && string_length != 5){
-        _move none = NULL_MOVE;
-        return none;
+        return fail;
     }
 
     if (move_uci[0] >= 'a' && move_uci[0] <= 'h'){
         from += move_uci[0] - 'a';
     }
+    else{
+        return fail;
+    }
     if (move_uci[1] >= '1' && move_uci[1] <= '8'){
         from += 8 * (move_uci[1] - '1');
+    }
+    else{
+        return fail;
     }
     if (move_uci[2] >= 'a' && move_uci[2] <= 'h'){
         to += move_uci[2] - 'a';
     }
+    else{
+        return fail;
+    }
     if (move_uci[3] >= '1' && move_uci[3] <= '8'){
         to += 8 * (move_uci[3] - '1');
+    }
+    else{
+        return fail;
     }
 
     if (string_length == 5){
@@ -78,6 +90,8 @@ _move mv_uci_to_move(char *move_uci, _board *board){
             case 'n':
                 promotion = board->turn == WHITE ? W_KNIGHT : B_KNIGHT;
                 break;
+            default:
+                return fail;
         }
     }
 
