@@ -52,6 +52,7 @@ lib.se_destroy_search_context.argtypes = [POINTER(search_context)]
 api_token: str = ""
 my_name: str = ""
 
+
 def post_move(id: str, move: move):
     move_uci = create_string_buffer("123456".encode('utf-8'))
     lib.mv_move_to_uci(move, move_uci)
