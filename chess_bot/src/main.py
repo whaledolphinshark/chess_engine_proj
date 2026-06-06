@@ -1,71 +1,28 @@
 import requests
 import json
 from threading import Thread
-from typing import NewType
-from ctypes import CDLL, Structure, POINTER, c_int, c_char, c_char_p, c_double, create_string_buffer
 from pathlib import Path
 import sys
 import random
-
-lib_path = Path(__file__).resolve().parent.parent / "bin" / "main.so"
-lib = CDLL(str(lib_path))
-
-class board(Structure):
-    pass
-
-class move(Structure):
-    _fields_ = [("to", c_int),
-                ("from", c_int),
-                ("piece", c_int),
-                ("capture", c_int),
-                ("promotion", c_int),
-                ("special_move", c_int)]
-
-class search_context(Structure):
-    pass
-
-class search_stats(Structure):
-    pass
-
-board_ptr = NewType("board_ptr", POINTER(board))
-context_ptr = NewType("context_ptr", POINTER(search_context))
-
-lib.init_chess_engine.restype = None
-lib.init_chess_engine.argtypes = []
-lib.cb_create_board.restype = POINTER(board)
-lib.cb_create_board.argtypes = []
-lib.cb_make_move.restype = None
-lib.cb_make_move.argtypes = [POINTER(board), move]
-lib.cb_destroy_board.restype = None
-lib.cb_destroy_board.argtypes = [POINTER(board)]
-lib.mv_move_to_uci.restype = None
-lib.mv_move_to_uci.argtypes = [move, POINTER(c_char)]
-lib.mv_uci_to_move.restype = move
-lib.mv_uci_to_move.argtypes = [c_char_p, POINTER(board)]
-lib.se_search.restype = move
-lib.se_search.argtypes = [POINTER(board), c_int, c_double, POINTER(search_context), POINTER(search_stats)]
-lib.se_init_search_context.restype = POINTER(search_context)
-lib.se_init_search_context.argtypes = []
-lib.se_destroy_search_context.restype = None
-lib.se_destroy_search_context.argtypes = [POINTER(search_context)]
+import subprocess
 
 api_token: str = ""
 my_name: str = ""
 
-
-def post_move(id: str, move: move):
-    move_uci = create_string_buffer("123456".encode('utf-8'))
-    lib.mv_move_to_uci(move, move_uci)
-
-    url = f"https://lichess.org/api/bot/game/{id}/move/{move_uci.value.decode()}"
+def post_move(id: str, move_uci: str):
+    url = f"https://lichess.org/api/bot/game/{id}/move/{move_uci}"
     headers = {"Authorization" : f"Bearer {api_token}"}
-    response = requests.post(url=url, headers=headers)
-    response.raise_for_status()
+    requests.post(url=url, headers=headers).raise_for_status()
 
 def play_game(id: str, my_color: bool):
-    # white = true, black = false
-    game_board: board_ptr = lib.cb_create_board()
-    context: context_ptr = lib.se_init_search_context()
+    bot_path = Path(__file__).resolve().parent.parent / "bin" / "bot"
+    chess_game = subprocess.Popen(
+        [bot_path, "6", "5"], 
+        stdin=subprocess.PIPE, 
+        stdout=subprocess.PIPE, 
+        text=True)
+    assert chess_game.stdin is not None
+    assert chess_game.stdout is not None
 
     url = f"https://lichess.org/api/bot/game/stream/{id}"
     headers = {"Authorization" : f"Bearer {api_token}"}
@@ -90,30 +47,23 @@ def play_game(id: str, my_color: bool):
             moves: list[str] = moves_str.split(" ") if moves_str else []
             last_move_color: bool = len(moves) % 2 == 1
             if last_move_color != my_color:
-                # make last move
-                if len(moves) > 0:
-                    print(moves[-1])
-                    move_uci = create_string_buffer(moves[-1].encode('utf-8'))
-                    last_move: move = lib.mv_uci_to_move(move_uci, game_board)
-                    lib.cb_make_move(game_board, last_move)
-
                 # get time
                 seconds: int = event["wtime" if my_color else "btime"] // 1000
 
-                # make move
-                print("thinking...")
-                next_move: move = lib.se_search(game_board, 6, 6 if seconds > 6 else seconds, context, None)
+                if len(moves) > 0:
+                    chess_game.stdin.write(f"{moves[-1]},{str(seconds)}\n")
+                    chess_game.stdin.flush()
+                else:
+                    chess_game.stdin.write(f"null,{str(seconds)}\n")
+                    chess_game.stdin.flush()
                 
-                # debug
-                move_uci = create_string_buffer("123456".encode('utf-8'))
-                lib.mv_move_to_uci(next_move, move_uci)
-                print(f"making move: {move_uci.value.decode()}")
+                response: str = chess_game.stdout.readline()
+                post_move(id, response)
 
-                lib.cb_make_move(game_board, next_move)
-                post_move(id, next_move)
+    # shut down the process
+    chess_game.stdin.close()
+    chess_game.wait()
 
-    lib.cb_destroy_board(game_board)
-    lib.se_destroy_search_context(context)
     print(f"finished game: {id}")
 
 if __name__ == "__main__":
@@ -129,8 +79,6 @@ if __name__ == "__main__":
 
     if not api_token or not my_name:
         sys.exit("api token or name not found")
-
-    lib.init_chess_engine()
 
     url: str = "https://lichess.org/api/bot/online"
     bots: list[str] = []
