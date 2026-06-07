@@ -156,6 +156,11 @@ static int search(_board *board, int depth, int alpha, int beta, int pv, _search
         }
         cb_undo_move(board);
 
+        // it may potentially affect how the history table is updated
+        if (time_elapsed(timer) > timer.max_time){
+            break;
+        }
+
         if (score > best_score){
             best_score = score;
             best_move = move;
@@ -174,7 +179,11 @@ static int search(_board *board, int depth, int alpha, int beta, int pv, _search
         }
     }
 
-    if (tt_contains_key(context->table, board->zobrist_hash) == 0 || ((_tt_search_entry *)tt_get_item(context->table, board->zobrist_hash))->depth < depth){
+    // only save entry if we still have time remaining
+    // else we may end up saving a bad entry
+    if (time_elapsed(timer) < timer.max_time && 
+            (tt_contains_key(context->table, board->zobrist_hash) == 0 || 
+            ((_tt_search_entry *)tt_get_item(context->table, board->zobrist_hash))->depth < depth)){
         _tt_search_entry entry = {best_score, depth, best_move, flag};
         tt_insert_item(context->table, board->zobrist_hash, &entry);
     }
