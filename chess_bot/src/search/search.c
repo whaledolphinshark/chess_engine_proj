@@ -11,6 +11,17 @@
 
 #define MAX_HISTORY 65536
 
+typedef struct _timer{
+    clock_t start;
+    int max_time;
+    int current_depth;
+    int min_depth;
+}_timer;
+
+static inline double time_elapsed(_timer timer){
+    return (double)(clock() - timer.start) / CLOCKS_PER_SEC;
+}
+
 static void update_history(const int bonus, const int index, _move moves[restrict MAX_MOVES], _search_context *restrict context){
     _move move = moves[index];
     context->history[move.piece][move.from][move.to] += bonus - (context->history[move.piece][move.from][move.to] * bonus) / MAX_HISTORY;
@@ -52,10 +63,10 @@ static void order_moves(_board *restrict board, _move moves[restrict MAX_MOVES],
     }
 }
 
-static int quiescence_search(_board *board, int alpha, int beta, _search_context *context, _search_stats *stats){
+static int quiescence_search(_board *board, int alpha, int beta, _search_context *context, _search_stats *stats, _timer timer){
     stats->quiescent_nodes_visited++;
     int best_score = ev_evaluate(board);
-    if (board->game_state != ONGOING || (board->in_check == 0 && best_score >= beta)){
+    if ((timer.current_depth > timer.min_depth && time_elapsed(timer) > timer.max_time) || board->game_state != ONGOING || (board->in_check == 0 && best_score >= beta)){
         return best_score;
     }
     if (best_score > alpha){
@@ -75,7 +86,7 @@ static int quiescence_search(_board *board, int alpha, int beta, _search_context
         }
 
         cb_make_move(board, move);
-        score = -quiescence_search(board, -beta, -alpha, context, stats);
+        score = -quiescence_search(board, -beta, -alpha, context, stats, timer);
         cb_undo_move(board);
 
         if (score > best_score){
@@ -92,13 +103,13 @@ static int quiescence_search(_board *board, int alpha, int beta, _search_context
     return best_score;
 }
 
-static int search(_board *board, int depth, int alpha, int beta, int pv, _search_context *context, _search_stats *stats){
+static int search(_board *board, int depth, int alpha, int beta, int pv, _search_context *context, _search_stats *stats, _timer timer){
     stats->nodes_visited++;
-    if (board->game_state != ONGOING){
+    if ((timer.current_depth > timer.min_depth && time_elapsed(timer) > timer.max_time) || board->game_state != ONGOING){
         return ev_evaluate(board);
     }
     if (depth <= 0){
-        return quiescence_search(board, alpha, beta, context, stats);
+        return quiescence_search(board, alpha, beta, context, stats, timer);
     }
 
     if (tt_contains_key(context->table, board->zobrist_hash) == 1){
@@ -131,13 +142,13 @@ static int search(_board *board, int depth, int alpha, int beta, int pv, _search
 
         cb_make_move(board, move);
         if (i == 0 && pv == 1){
-            score = -search(board, depth - 1, -beta, -alpha, 1, context, stats);
+            score = -search(board, depth - 1, -beta, -alpha, 1, context, stats, timer);
         }
         else{
-            score = -search(board, depth - depth_reduction, -alpha - 1, -alpha, 0, context, stats);
+            score = -search(board, depth - depth_reduction, -alpha - 1, -alpha, 0, context, stats, timer);
             if (pv == 1 && score > alpha){
                 stats->researches++;
-                score = -search(board, depth - 1, -beta, -alpha, 1, context, stats);
+                score = -search(board, depth - 1, -beta, -alpha, 1, context, stats, timer);
                 if (score <= alpha){
                     stats->research_fail_low++;
                 }
@@ -184,16 +195,13 @@ _move se_search(_board *board, int depth, double time, _search_context *context,
         stats = &placeholder;
     }
 
-    int i = 1;
+    int current_depth = 1;
     clock_t start = clock();
-    while (i <= depth){
-        search(board, i, DEFAULT_ALPHA, DEFAULT_BETA, 1, context, stats);
-        i++;
-    }
-
-    while ((double)(clock() - start) / CLOCKS_PER_SEC < time){
-        search(board, i, DEFAULT_ALPHA, DEFAULT_BETA, 1, context, stats);
-        i++;
+    _timer timer = {start, time, current_depth, depth};
+    while (current_depth <= depth || time_elapsed(timer) < time){
+        search(board, current_depth, DEFAULT_ALPHA, DEFAULT_BETA, 1, context, stats, timer);
+        current_depth++;
+        timer.current_depth = current_depth;
     }
 
     for (int i = 0; i < 12; i++){
@@ -203,7 +211,7 @@ _move se_search(_board *board, int depth, double time, _search_context *context,
             }
         }
     }
-
+    
     _tt_search_entry *entry = (_tt_search_entry *)tt_get_item(context->table, board->zobrist_hash);
     stats->eval = entry->eval;
     return entry->best_move;
