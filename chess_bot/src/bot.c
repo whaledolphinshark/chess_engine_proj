@@ -86,6 +86,21 @@ int main(int argc, char *argv[]){
                 continue;
             }
 
+            _move moves[MAX_MOVES];
+            int move_count;
+            int valid = 0;
+            mv_generate_moves(board, moves, &move_count);
+            for (int i = 0; i < move_count; i++){
+                if (mv_moves_equal(moves[i], move)){
+                    valid = 1;
+                }
+            }
+            if (valid == 0){
+                printf("invalid input\n");
+                fflush(stdout);
+                continue;
+            }
+
             cb_make_move(board, move);
             const _move response = se_search(board, min_depth, search_time, context, NULL);
             cb_make_move(board, response);
