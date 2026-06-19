@@ -13,10 +13,10 @@
 #define MAX_HISTORY 65536
 
 typedef struct _timer{
-    clock_t start;
-    int max_time;
+    const clock_t start;
+    const int max_time;
     int current_depth;
-    int min_depth;
+    const int min_depth;
 }_timer;
 
 static inline double time_elapsed(_timer timer){
