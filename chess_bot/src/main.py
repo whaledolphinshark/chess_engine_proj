@@ -12,10 +12,14 @@ min_depth: int | None = None
 max_seconds: int | None = None
 max_games: int | None = None
 
+def resign_game(id: str):
+    url = f"https://lichess.org/api/bot/game/{id}/resign"
+    headers = {"Authorization" : f"Bearer {api_token}"}
+    requests.post(url=url, headers=headers).raise_for_status()
+
 def abort_game(id: str):
     url = f"https://lichess.org/api/bot/game/{id}/abort"
     headers = {"Authorization" : f"Bearer {api_token}"}
-    # lets hope this does not fail
     requests.post(url=url, headers=headers).raise_for_status()
 
 def post_move(id: str, move_uci: str):
@@ -35,6 +39,7 @@ def play_game(id: str, my_color: bool):
 
     url = f"https://lichess.org/api/bot/game/stream/{id}"
     headers = {"Authorization" : f"Bearer {api_token}"}
+    can_abort: bool = True
     with requests.get(url=url, headers=headers, stream=True) as r:
         print(r.status_code)
         r.raise_for_status()
@@ -70,8 +75,12 @@ def play_game(id: str, my_color: bool):
                     response: str = chess_game.stdout.readline()
                     print(f"response: {response}")
                     post_move(id, response)
+                    can_abort = False
         except:
-            abort_game(id)
+            if can_abort:
+                abort_game(id)
+            else:
+                resign_game(id)
 
     # shut down the process
     chess_game.stdin.close()
@@ -116,7 +125,7 @@ if __name__ == "__main__":
     url = "https://lichess.org/api/stream/event"
     headers = {"Authorization" : f"Bearer {api_token}"}
     # challenge ai to test
-    data = {"level": 4, "clock.limit": 300, "clock.increment": 3, "color": "random", "variant": "standard"}
+    data = {"level": 1, "clock.limit": 300, "clock.increment": 3, "color": "random", "variant": "standard"}
     requests.post(url=f"https://lichess.org/api/challenge/ai", headers=headers, data=data).raise_for_status()
 
     with requests.get(url=url, headers=headers, stream=True) as r:
