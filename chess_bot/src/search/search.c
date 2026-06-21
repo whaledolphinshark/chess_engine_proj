@@ -90,6 +90,10 @@ static int quiescence_search(_board *board, int alpha, int beta, _search_context
         score = -quiescence_search(board, -beta, -alpha, context, stats, timer);
         cb_undo_move(board);
 
+        if (timer.current_depth > timer.min_depth && time_elapsed(timer) > timer.max_time){
+            break;
+        }
+
         if (score > best_score){
             best_score = score;
             if (score >= beta){
@@ -157,8 +161,7 @@ static int search(_board *board, int depth, int alpha, int beta, int pv, _search
         }
         cb_undo_move(board);
 
-        // it may potentially affect how the history table is updated
-        if (time_elapsed(timer) > timer.max_time){
+        if (timer.current_depth > timer.min_depth && time_elapsed(timer) > timer.max_time){
             break;
         }
 
