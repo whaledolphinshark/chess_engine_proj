@@ -22,7 +22,7 @@ int ev_evaluate(_board *board){
         return 0;
     }
     if (board->game_state != ONGOING){
-        return INT_MIN + 1;
+        return MATE_SCORE;
     }
 
     int white_score = 0;

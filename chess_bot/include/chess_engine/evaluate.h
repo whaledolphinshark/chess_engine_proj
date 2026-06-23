@@ -4,6 +4,7 @@
 #include "chess_types.h"
 
 #define TOTAL_PHASE_VALUE 24
+#define MATE_SCORE -500000
 
 extern const int piece_phase_value[12];
 extern const int piece_values[12];
