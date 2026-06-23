@@ -1,6 +1,6 @@
 bin/
 *.mk
-todo.txt
+*.txt
 **/alt_bot/*
 .vscode
 *.env
