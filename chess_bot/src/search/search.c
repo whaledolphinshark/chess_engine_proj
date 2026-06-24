@@ -1,7 +1,6 @@
 #include <limits.h>
 #include <stdlib.h>
 #include <time.h>
-#include <stdio.h>
 
 #include "chess_engine/search.h"
 #include "chess_engine/board.h"
@@ -14,7 +13,7 @@
 
 typedef struct _timer{
     const clock_t start;
-    const int max_time;
+    const double max_time;
     int current_depth;
     const int min_depth;
 }_timer;
@@ -47,9 +46,13 @@ static void order_moves(_board *restrict board, _move moves[restrict MAX_MOVES],
         values[i] = 0;
         _move move = moves[i];
         values[i] += (mv_moves_equal(hash_move, move) == 1) * 60000;
-        values[i] += (move.capture != NONE) * (piece_values[move.capture] - piece_values[move.piece] + 10000);
+        if (move.capture != NONE){
+            values[i] += piece_values[move.capture] - piece_values[move.piece] + 10000;
+        }
+        else{
+            values[i] += context->history[move.piece][move.from][move.to];
+        }
         values[i] += (move.special_move == PROMOTION) * 5000;
-        values[i] += (move.capture == NONE) * context->history[move.piece][move.from][move.to];
 
         int j = i;
         while (j > 0 && values[j] > values[j - 1]){
