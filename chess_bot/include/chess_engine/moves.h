@@ -5,6 +5,7 @@
 
 #define MAX_MOVE_BUFFER_SIZE 6
 #define NULL_MOVE {0, 0, NONE, NONE, NONE, NORMAL}
+#define INVALID_MOVE {-1, 0, NONE, NONE, NONE, NORMAL}
 
 extern uint64_t rook_masks[64];
 extern uint64_t bishop_masks[64];
@@ -45,6 +46,7 @@ void mv_generate_enemy_moves(_board *restrict board, _move move_buffer[restrict 
 int mv_has_moves(_board *restrict board);
 _move mv_uci_to_move(char *move_uci, _board *board);
 void mv_move_to_uci(_move move, char *buffer);
+int mv_is_invalid_move(const _move cmp);
 int mv_is_null_move(const _move cmp);
 void mv_print_move(_move move, int new_line);
 void mv_print_moves(_board *board);

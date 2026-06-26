@@ -9,6 +9,10 @@ int mv_moves_equal(const _move left, const _move right){
     return left.from == right.from && left.to == right.to && left.piece == right.piece && left.promotion == right.promotion && left.capture == right.capture && left.special_move == right.special_move;
 }
 
+int mv_is_invalid_move(const _move cmp){
+    return cmp.from == -1 && cmp.to == 0 && cmp.piece == NONE && cmp.promotion == NONE && cmp.capture == NONE && cmp.special_move == NORMAL;
+}
+
 int mv_is_null_move(const _move cmp){
     return cmp.from == 0 && cmp.to == 0 && cmp.piece == NONE && cmp.promotion == NONE && cmp.capture == NONE && cmp.special_move == NORMAL;
 }
@@ -38,7 +42,7 @@ _move mv_init_move(_board *board, int from, int to, _piece promotion){
 }
 
 _move mv_uci_to_move(char *move_uci, _board *board){
-    _move fail = NULL_MOVE;
+    _move fail = INVALID_MOVE;
     int string_length = 0;
     _piece promotion = NONE;
     int from = 0;

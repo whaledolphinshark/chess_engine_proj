@@ -80,7 +80,7 @@ int main(int argc, char *argv[]){
         }
         else{
             const _move move = mv_uci_to_move(move_uci, board);
-            if (mv_is_null_move(move) == 1){
+            if (mv_is_invalid_move(move) == 1){
                 printf("invalid input\n");
                 fflush(stdout);
                 continue;

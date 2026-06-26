@@ -125,7 +125,7 @@ if __name__ == "__main__":
     url = "https://lichess.org/api/stream/event"
     headers = {"Authorization" : f"Bearer {api_token}"}
     # challenge ai to test
-    data = {"level": 1, "clock.limit": 300, "clock.increment": 3, "color": "random", "variant": "standard"}
+    data = {"level": 7, "clock.limit": 300, "clock.increment": 3, "color": "random", "variant": "standard"}
     requests.post(url=f"https://lichess.org/api/challenge/ai", headers=headers, data=data).raise_for_status()
 
     with requests.get(url=url, headers=headers, stream=True) as r:
