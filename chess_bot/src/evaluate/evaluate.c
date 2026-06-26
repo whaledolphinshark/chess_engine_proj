@@ -17,6 +17,20 @@ const int knight_table[64] = {-50, -40, -30, -30,- 30, -30, -40, -50, -40, -20, 
 const int king_mid_table[64] = {20, 30, 10, 0, 0, 10, 30, 20, 20, 20, 0, 0, 0, 0, 20, 20, -10, -20, -20, -20, -20, -20, -20, -10, -20, -30, -30, -40, -40, -30, -30, -20, -30, -40, -40, -50, -50, -40, -40, -30, -30, -40, -40, -50, -50, -40, -40, -30, -30, -40, -40, -50, -50, -40, -40, -30, -30, -40, -40, -50, -50, -40, -40, -30};
 const int king_end_table[64] = {-50, -30, -30, -30, -30, -30, -30, -50, -30, -30, 0, 0, 0, 0, -30, -30, -30, -10, 20, 30, 30, 20, -10, -30, -30, -10, 30, 40, 40, 30, -10, -30, -30, -10, 30, 40, 40, 30, -10, -30, -30, -10, 20, 30, 30, 20, -10, -30, -30, -20, -10, 0, 0, -10, -20, -30, -50, -40, -30, -20, -20, -30, -40, -50};
 
+int ev_non_pawn_material(_board *board){
+    uint64_t pieces = board->board;
+    int material = 0;
+    while (pieces != 0){
+        const int square = bb_pop_lsb(&pieces) - 1;
+        const _piece piece = board->piece_array[square];
+        if (piece != B_KING && piece != W_KING && piece != B_PAWN && piece != W_PAWN){
+            material += piece_values[piece];
+        }
+    }
+
+    return material;
+}
+
 int ev_evaluate(_board *board){
     if (board->game_state == DRAW){
         return 0;
@@ -36,8 +50,8 @@ int ev_evaluate(_board *board){
     uint64_t black_control = 0;
 
     while (white_pieces != 0){
-        int square = bb_pop_lsb(&white_pieces) - 1;
-        _piece piece = board->piece_array[square];
+        const int square = bb_pop_lsb(&white_pieces) - 1;
+        const _piece piece = board->piece_array[square];
         white_score += white_piece_values[piece];
         phase_value += piece_phase_value[piece];
         
@@ -70,8 +84,8 @@ int ev_evaluate(_board *board){
     }
 
     while (black_pieces != 0){
-        int square = bb_pop_lsb(&black_pieces) - 1;
-        _piece piece = board->piece_array[square];
+        const int square = bb_pop_lsb(&black_pieces) - 1;
+        const _piece piece = board->piece_array[square];
         black_score += black_piece_values[piece];
         phase_value += piece_phase_value[piece];
         
