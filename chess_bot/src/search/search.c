@@ -1,6 +1,8 @@
 #include <limits.h>
 #include <stdlib.h>
 #include <time.h>
+#include <stdio.h>
+#include <string.h>
 
 #include "chess_engine/search.h"
 #include "chess_engine/board.h"
@@ -17,6 +19,11 @@ typedef struct _timer{
     int current_depth;
     const int min_depth;
 }_timer;
+
+typedef struct _node_info{
+    int pv;
+    int null_move;
+}_node_info;
 
 static inline double time_elapsed(_timer timer){
     return (double)(clock() - timer.start) / CLOCKS_PER_SEC;
@@ -111,7 +118,7 @@ static int quiescence_search(_board *board, int alpha, int beta, _search_context
     return best_score;
 }
 
-static int search(_board *board, int depth, int alpha, int beta, int pv, _search_context *context, _search_stats *stats, _timer timer){
+static int search(_board *board, const int depth, int alpha, const int beta, const _node_info info, _search_context *context, _search_stats *stats, const _timer timer){
     stats->nodes_visited++;
     if ((timer.current_depth > timer.min_depth && time_elapsed(timer) > timer.max_time) || board->game_state != ONGOING){
         return ev_evaluate(board);
@@ -126,6 +133,17 @@ static int search(_board *board, int depth, int alpha, int beta, int pv, _search
             return entry->eval;
         }
     }
+
+    // const int endgame = ev_non_pawn_material(board) <= 2 * piece_values[W_ROOK] + piece_values[W_BISHOP] ? 1 : 0;
+    // if (depth > 3 && board->in_check == 0 && endgame == 0 && info.pv == 0 && info.null_move == 1){
+    //     // make null move
+    //     const int score = -search(board, depth - 3, -beta, -beta + 1, (_node_info){0, 0}, context, stats, timer);
+    //     // undo null move
+    //     if (score >= beta){
+    //         return score;
+    //     }
+
+    // }
     
     _move moves[MAX_MOVES];
     int values[MAX_MOVES];
@@ -149,14 +167,14 @@ static int search(_board *board, int depth, int alpha, int beta, int pv, _search
         }
 
         cb_make_move(board, move);
-        if (i == 0 && pv == 1){
-            score = -search(board, depth - 1, -beta, -alpha, 1, context, stats, timer);
+        if (i == 0 && info.pv == 1){
+            score = -search(board, depth - 1, -beta, -alpha, (_node_info){1, 1}, context, stats, timer);
         }
         else{
-            score = -search(board, depth - depth_reduction, -alpha - 1, -alpha, 0, context, stats, timer);
-            if (pv == 1 && score > alpha){
+            score = -search(board, depth - depth_reduction, -alpha - 1, -alpha, (_node_info){0, 1}, context, stats, timer);
+            if (info.pv == 1 && score > alpha){
                 stats->researches++;
-                score = -search(board, depth - 1, -beta, -alpha, 1, context, stats, timer);
+                score = -search(board, depth - 1, -beta, -alpha, (_node_info){1, 1}, context, stats, timer);
                 if (score <= alpha){
                     stats->research_fail_low++;
                 }
@@ -210,14 +228,27 @@ _move se_search(_board *board, int depth, double time, _search_context *context,
         stats = &placeholder;
     }
 
+    FILE *fptr = fopen("output.txt", "a");
+    char temp_buffer[MAX_FEN_LENGTH];
+    cb_board_to_fen(board, temp_buffer);
+    fprintf(fptr, "%s\n", temp_buffer);
+    fflush(fptr);
+
     int current_depth = 1;
     clock_t start = clock();
     _timer timer = {start, time, current_depth, depth};
+    _node_info info = {1, 1};
     while (current_depth <= depth || time_elapsed(timer) < time){
-        search(board, current_depth, DEFAULT_ALPHA, DEFAULT_BETA, 1, context, stats, timer);
+        search(board, current_depth, DEFAULT_ALPHA, DEFAULT_BETA, info, context, stats, timer);
+        _tt_search_entry *entry = (_tt_search_entry *)tt_get_item(context->table, board->zobrist_hash);
+        fprintf(fptr, "depth: %d, time: %f, game state: %d, min depth: %d, max time: %f, nodes visited: %d, entry depth: %d, entry eval: %d\n", current_depth, time_elapsed(timer), board->game_state, timer.min_depth, timer.max_time, stats->nodes_visited, entry->depth, entry->eval);
+        fflush(fptr);
+        stats->nodes_visited = 0;
         current_depth++;
         timer.current_depth = current_depth;
     }
+
+    fclose(fptr);
 
     for (int i = 0; i < 12; i++){
         for (int j = 0; j < 64; j++){
