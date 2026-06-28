@@ -143,7 +143,7 @@ void cb_fen_to_board(_board *board, char *fen){
 
     // game state
     board->game_state = ONGOING;
-    cb_calculate_game_state(board, mv_has_moves(board));
+    cb_calculate_game_state(board);
 }
 
 void cb_board_to_fen(_board *board, char *buffer){

@@ -10,7 +10,9 @@
 #include "utils/bitboard_util.h"
 #include "utils/error_handling.h"
 
-void cb_calculate_game_state(_board *restrict board, const int has_moves){
+void cb_calculate_game_state(_board *restrict board){
+    const int has_moves = mv_has_moves(board);
+
     // checkmate, stalemate, 50 move rule
     if (board->in_check == 1 && has_moves == 0){
         board->game_state = board->turn == WHITE ? B_WIN : W_WIN;
@@ -151,7 +153,7 @@ void cb_make_move(_board *restrict board, const _move move){
 
         gl_append_item(board->previous_moves, &move_state);
 
-        cb_calculate_game_state(board, mv_has_moves(board));
+        cb_calculate_game_state(board);
 
         return;
     }
@@ -274,7 +276,7 @@ void cb_make_move(_board *restrict board, const _move move){
     // add move to previous moves
     gl_append_item(board->previous_moves, &move_state);
 
-    cb_calculate_game_state(board, mv_has_moves(board));
+    cb_calculate_game_state(board);
 }
 
 void cb_undo_move(_board *restrict board){
