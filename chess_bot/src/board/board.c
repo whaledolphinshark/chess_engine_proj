@@ -128,6 +128,33 @@ void cb_make_move(_board *restrict board, const _move move){
     }
     board->en_passant_square = 0;
     board->halfmove_clock++;
+    board->plies++;
+    board->zobrist_hash ^= black_turn_key;
+    if (board->turn == BLACK){
+        board->fullmove_clock++;
+    }
+
+    // check if null move
+    if (mv_is_null_move(move) == 1){
+        if (board->in_check == 1){
+            eh_die("cannot make null move");
+        }
+
+        board->turn = board->turn == WHITE ? BLACK : WHITE;
+        if (tt_contains_key(board->history, board->zobrist_hash) == 1){
+            int *num = (int *)tt_get_item(board->history, board->zobrist_hash);
+            (*num)++;
+        }
+        else{
+            tt_insert_item(board->history, board->zobrist_hash, &(int){1});
+        }
+
+        gl_append_item(board->previous_moves, &move_state);
+
+        cb_calculate_game_state(board, mv_has_moves(board));
+
+        return;
+    }
 
     // make the move
     // if it is a promotion, i only need to check if it is a capture as well
@@ -220,12 +247,7 @@ void cb_make_move(_board *restrict board, const _move move){
     board->white_pieces = board->bitboards[W_KING] | board->bitboards[W_PAWN] | board->bitboards[W_ROOK] | board->bitboards[W_BISHOP] | board->bitboards[W_KNIGHT] | board->bitboards[W_QUEEN];
     board->black_pieces = board->bitboards[B_KING] | board->bitboards[B_PAWN] | board->bitboards[B_ROOK] | board->bitboards[B_BISHOP] | board->bitboards[B_KNIGHT] | board->bitboards[B_QUEEN];
     board->board = board->white_pieces | board->black_pieces;
-    board->zobrist_hash ^= black_turn_key;
-    if (board->turn == BLACK){
-        board->fullmove_clock++;
-    }
 
-    board->plies++;
     uint64_t potential_king_in_check;
     if (board->turn == WHITE){
         board->turn = BLACK;
@@ -285,6 +307,12 @@ void cb_undo_move(_board *restrict board){
         board->turn = WHITE;
     }
 
+    gl_remove_item(board->previous_moves, prev_moves_count - 1);
+
+    if (mv_is_null_move(move) == 1){
+        return;
+    }
+
     if (move.special_move == PROMOTION){
         board->bitboards[move.promotion] ^= 1UL << move.to;
         board->bitboards[move.piece] ^= 1UL << move.from;
@@ -337,8 +365,6 @@ void cb_undo_move(_board *restrict board){
     board->white_pieces = board->bitboards[W_KING] | board->bitboards[W_PAWN] | board->bitboards[W_ROOK] | board->bitboards[W_BISHOP] | board->bitboards[W_KNIGHT] | board->bitboards[W_QUEEN];
     board->black_pieces = board->bitboards[B_KING] | board->bitboards[B_PAWN] | board->bitboards[B_ROOK] | board->bitboards[B_BISHOP] | board->bitboards[B_KNIGHT] | board->bitboards[B_QUEEN];
     board->board = board->white_pieces | board->black_pieces;
-
-    gl_remove_item(board->previous_moves, prev_moves_count - 1);
 }
 
 void cb_print_board(_board *board){
