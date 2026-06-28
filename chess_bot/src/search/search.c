@@ -136,7 +136,8 @@ static int search(_board *board, const int depth, int alpha, const int beta, con
 
     // null move pruning
     const int endgame = ev_non_pawn_material(board) <= 2 * piece_values[W_ROOK] + piece_values[W_BISHOP] ? 1 : 0;
-    if (depth > 3 && board->in_check == 0 && endgame == 0 && info.pv == 0 && info.null_move == 1){
+    const int static_score = ev_evaluate(board);
+    if (static_score >= beta && depth > 3 && board->in_check == 0 && endgame == 0 && info.pv == 0 && info.null_move == 1){
         // make null move
         cb_make_move(board, (_move)NULL_MOVE);
         const int score = -search(board, depth - 3, -beta, -beta + 1, (_node_info){0, 0}, context, stats, timer);
