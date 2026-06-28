@@ -127,7 +127,7 @@ static int search(_board *board, const int depth, int alpha, const int beta, con
         return quiescence_search(board, alpha, beta, context, stats, timer);
     }
 
-    if (tt_contains_key(context->table, board->zobrist_hash) == 1){
+    if (info.pv == 0 && tt_contains_key(context->table, board->zobrist_hash) == 1){
         _tt_search_entry *entry = (_tt_search_entry *)tt_get_item(context->table, board->zobrist_hash);
         if (entry->depth >= depth && (entry->flag == EXACT || (entry->flag == LOWER_BOUND && entry->eval >= beta) || (entry->flag == UPPER_BOUND && entry->eval <= alpha))){
             return entry->eval;
