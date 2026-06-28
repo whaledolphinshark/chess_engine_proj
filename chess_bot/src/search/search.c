@@ -206,7 +206,7 @@ static int search(_board *board, const int depth, int alpha, const int beta, con
 
     // only save entry if we still have time remaining
     // else we may end up saving a bad entry
-    if ((timer.current_depth < timer.min_depth || time_elapsed(timer) < timer.max_time) && 
+    if ((timer.current_depth <= timer.min_depth || time_elapsed(timer) < timer.max_time) && 
             (tt_contains_key(context->table, board->zobrist_hash) == 0 || ((_tt_search_entry *)tt_get_item(context->table, board->zobrist_hash))->depth < depth)){
         _tt_search_entry entry = {best_score, depth, best_move, flag};
         tt_insert_item(context->table, board->zobrist_hash, &entry);
