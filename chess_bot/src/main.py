@@ -1,10 +1,11 @@
 import requests
 import json
-from threading import Thread
+import threading
 from pathlib import Path
 import sys
 import random
 import subprocess
+import queue
 
 api_token: str | None = None
 my_name: str | None = None
@@ -37,52 +38,80 @@ def play_game(id: str, my_color: bool):
     assert chess_game.stdin is not None
     assert chess_game.stdout is not None
 
+    event_queue = queue.Queue()
+    stream_stop = threading.Event()
+
     url = f"https://lichess.org/api/bot/game/stream/{id}"
     headers = {"Authorization" : f"Bearer {api_token}"}
-    can_abort: bool = True
-    with requests.get(url=url, headers=headers, stream=True) as r:
-        print(r.status_code)
-        r.raise_for_status()
-
+    def stream_reader():
         try:
-            for line in r.iter_lines():
-                print(line)
-                if not line:
-                    continue
+            with requests.get(url=url, headers=headers, stream=True) as r:
+                r.raise_for_status()
+                for line in r.iter_lines():
+                    if not line:
+                        continue
+                    event = json.loads(line)
+                    if event["type"] == "gameFull":
+                        event = event["state"]
+                    event_queue.put(("stream", event))
+        except Exception as e:
+            event_queue.put(("stream error", e))
+            stream_stop.set()
 
-                event = json.loads(line)
-                if event["type"] == "gameFull":
-                    event = event["state"]
+    def engine():
+        assert chess_game.stdout is not None
+        try:
+            while not stream_stop.is_set():
+                line = chess_game.stdout.readline()
+                if not line:  # engine crashed
+                    event_queue.put(("engine_error", RuntimeError("engine crashed")))
+                    return
+                event_queue.put(("engine", line))
+        except Exception as e:
+            event_queue.put(("engine_error", e))
 
-                # check status
+    stream_thread = threading.Thread(target=stream_reader, daemon=True)
+    engine_thread = threading.Thread(target=engine, daemon=True)
+    stream_thread.start()
+    engine_thread.start()
+
+    can_abort: bool = True
+    try:
+        while True:
+            source, message = event_queue.get()
+
+            if source == "stream":
+                event: dict = message
                 if event["status"] != "started":
+                    stream_stop.set()
                     break
                 
                 moves_str: str = event["moves"]
                 moves: list[str] = moves_str.split(" ") if moves_str else []
-                last_move_color: bool = len(moves) % 2 == 1
-                if last_move_color != my_color:
-                    # get time
-                    seconds: int = event["wtime" if my_color else "btime"] // 1000
-
-                    if len(moves) > 0:
-                        chess_game.stdin.write(f"{moves[-1]},{str(seconds)}\n")
-                        chess_game.stdin.flush()
-                    else:
-                        chess_game.stdin.write(f"null,{str(seconds)}\n")
-                        chess_game.stdin.flush()
-                    
-                    response: str = chess_game.stdout.readline()
-                    print(f"response: {response}")
-                    post_move(id, response)
+                num_moves: int = len(moves)
+                if num_moves > 2:
                     can_abort = False
-        except:
-            if can_abort:
-                abort_game(id)
-            else:
-                resign_game(id)
+                last_move_color: bool = num_moves % 2 == 1
+                if last_move_color != my_color:
+                    seconds: str = str(event["wtime" if my_color else "btime"] // 1000)
+                    move: str = moves[-1] if num_moves > 0 else "null"
 
-    # shut down the process
+                    chess_game.stdin.write(f"{move},{seconds}\n")
+                    chess_game.stdin.flush()
+            elif source == "engine":
+                response: str = message
+                print(f"response: {response}")
+                post_move(id, response)
+            else:
+                error: Exception = message
+                raise error
+    except Exception as e:
+        if can_abort:
+            abort_game(id)
+        else:
+            resign_game(id)
+        print(e)
+
     chess_game.stdin.close()
     chess_game.wait()
 
@@ -121,7 +150,7 @@ if __name__ == "__main__":
         for line in r.iter_lines():
             bots.append(json.loads(line)["username"])
 
-    games: list[Thread] = []
+    games: list[threading.Thread] = []
     url = "https://lichess.org/api/stream/event"
     headers = {"Authorization" : f"Bearer {api_token}"}
     # challenge ai to test
@@ -138,7 +167,7 @@ if __name__ == "__main__":
             event = json.loads(line)
             if event["type"] == "gameStart":
                 # start thread to handle game
-                game_thread: Thread = Thread(target=play_game, args=(event["game"]["gameId"], 
+                game_thread: threading.Thread = threading.Thread(target=play_game, args=(event["game"]["gameId"], 
                                             event["game"]["color"] == "white"))
                 game_thread.start()
                 games.append(game_thread)
