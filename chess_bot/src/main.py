@@ -28,6 +28,16 @@ def post_move(id: str, move_uci: str):
     headers = {"Authorization" : f"Bearer {api_token}"}
     requests.post(url=url, headers=headers).raise_for_status()
 
+def decline_draw(id: str):
+    url = f"https://lichess.org/api/board/game/{id}/draw/no"
+    headers = {"Authorization" : f"Bearer {api_token}"}
+    requests.post(url=url, headers=headers).raise_for_status()
+
+def decline_takeback(id: str):
+    url = f"https://lichess.org/api/board/game/{id}/takeback/no"
+    headers = {"Authorization" : f"Bearer {api_token}"}
+    requests.post(url=url, headers=headers).raise_for_status()
+
 def play_game(id: str, my_color: bool):
     bot_path = Path(__file__).resolve().parent.parent / "bin" / "bot"
     chess_game = subprocess.Popen(
@@ -40,19 +50,35 @@ def play_game(id: str, my_color: bool):
 
     event_queue = queue.Queue()
     stream_stop = threading.Event()
-
-    url = f"https://lichess.org/api/board/game/stream/{id}"
-    headers = {"Authorization" : f"Bearer {api_token}"}
     def stream_reader():
+        # white = True, black = False
+        color: bool = True
         try:
+            url: str = f"https://lichess.org/api/board/game/stream/{id}"
+            headers: dict = {"Authorization" : f"Bearer {api_token}"}
             with requests.get(url=url, headers=headers, stream=True) as r:
                 r.raise_for_status()
                 for line in r.iter_lines():
                     if not line:
                         continue
+
                     event = json.loads(line)
                     if event["type"] == "gameFull":
+                        # see which color i am
+                        if event["black"]["name"] == my_name:
+                            color = False
                         event = event["state"]
+
+                    # check if takeback or draw offer
+                    draw_offer: str = "bdraw" if color else "wdraw"
+                    takeback_offer: str = "btakeback" if color else "wtakeback"
+                    if draw_offer in event:
+                        # decline
+                        decline_draw(id)
+                    if takeback_offer in event:
+                        # decline
+                        decline_takeback(id)
+
                     event_queue.put(("stream", event))
         except Exception as e:
             event_queue.put(("stream error", e))
