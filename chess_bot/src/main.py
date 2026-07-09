@@ -41,7 +41,7 @@ def play_game(id: str, my_color: bool):
     event_queue = queue.Queue()
     stream_stop = threading.Event()
 
-    url = f"https://lichess.org/api/bot/game/stream/{id}"
+    url = f"https://lichess.org/api/board/game/stream/{id}"
     headers = {"Authorization" : f"Bearer {api_token}"}
     def stream_reader():
         try:
@@ -76,6 +76,7 @@ def play_game(id: str, my_color: bool):
     engine_thread.start()
 
     can_abort: bool = True
+    exit_stream: bool = True
     try:
         while True:
             source, message = event_queue.get()
@@ -100,16 +101,18 @@ def play_game(id: str, my_color: bool):
                     chess_game.stdin.flush()
             elif source == "engine":
                 response: str = message
-                print(f"response: {response}")
                 post_move(id, response)
             else:
                 error: Exception = message
+                if source == "stream error":
+                    exit_stream = False
                 raise error
     except Exception as e:
-        if can_abort:
-            abort_game(id)
-        else:
-            resign_game(id)
+        if exit_stream:
+            if can_abort:
+                abort_game(id)
+            else:
+                resign_game(id)
         print(e)
 
     chess_game.stdin.close()
@@ -142,54 +145,54 @@ if __name__ == "__main__":
     read_env()
     assert max_games
 
-    url: str = "https://lichess.org/api/bot/online"
+    # get bots
     bots: list[str] = []
-    with requests.get(url=url) as r:
+    with requests.get(url="https://lichess.org/api/bot/online") as r:
         r.raise_for_status()
 
         for line in r.iter_lines():
             bots.append(json.loads(line)["username"])
 
-    games: list[threading.Thread] = []
-    url = "https://lichess.org/api/stream/event"
-    headers = {"Authorization" : f"Bearer {api_token}"}
-    # challenge ai to test
-    data = {"level": 7, "clock.limit": 300, "clock.increment": 3, "color": "random", "variant": "standard"}
-    requests.post(url=f"https://lichess.org/api/challenge/ai", headers=headers, data=data).raise_for_status()
-
+    num_games: int = 0
+    playing_game: bool = False
+    url: str = "https://lichess.org/api/stream/event"
+    headers: dict = {"Authorization" : f"Bearer {api_token}"}
     with requests.get(url=url, headers=headers, stream=True) as r:
         r.raise_for_status()
 
         for line in r.iter_lines():
             if not line:
+                # challenge ai to test
+                if not playing_game:
+                    with requests.get(url="https://lichess.org/api/challenge", headers=headers) as s:
+                        challenges = s.json()
+                        if len(challenges["in"]) == 0 and len(challenges["out"]) == 0:
+                            # make challenge
+                            data = {"clock.limit": 300, "clock.increment": 3, "color": "random", "variant": "standard"}
+                            requests.post(url=f"https://lichess.org/api/challenge/{random.choice(bots)}", headers=headers, data=data).raise_for_status()
                 continue
 
             event = json.loads(line)
-            if event["type"] == "gameStart":
+            event_type: str = event["type"]
+            if event_type == "gameStart":
                 # start thread to handle game
                 game_thread: threading.Thread = threading.Thread(target=play_game, args=(event["game"]["gameId"], 
                                             event["game"]["color"] == "white"))
                 game_thread.start()
-                games.append(game_thread)
-            elif (event["type"] == "challenge" and 
+                playing_game = True
+            elif (event_type == "challenge" and 
+                  not playing_game and
                   event["challenge"]["status"] == "created" and
                   event["challenge"]["destUser"]["name"] == my_name and
                   event["challenge"]["variant"]["key"] == "standard" and
                   event["challenge"]["speed"] == "blitz"):
                 # accept challenge
                 requests.post(url=f"https://lichess.org/api/challenge/{event["challenge"]["id"]}/accept", headers=headers).raise_for_status()
+            elif event_type == "gameFinish":
+                playing_game = False
+                num_games += 1
 
-
-            if len(games) >= max_games:
+            if num_games >= max_games:
                 break
             
-            # # make challenges if we can
-            # with requests.get(url="https://lichess.org/api/challenge", headers=headers) as s:
-            #     challenges = s.json()
-            #     if len(challenges["in"]) == 0 and len(challenges["out"]) == 0:
-            #         # make challenge
-            #         url = f"https://lichess.org/api/challenge/{random.choice(bots)}?clock.limit=300&clock.increment=3&color=random"
-            #         requests.post(url=url, headers=headers).raise_for_status()
-
-    for game in games:
-        game.join()       
+print("exiting program")
