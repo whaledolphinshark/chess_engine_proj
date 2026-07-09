@@ -231,27 +231,15 @@ _move se_search(_board *board, int depth, double time, _search_context *context,
         stats = &placeholder;
     }
 
-    FILE *fptr = fopen("output.txt", "a");
-    char temp_buffer[MAX_FEN_LENGTH];
-    cb_board_to_fen(board, temp_buffer);
-    fprintf(fptr, "%s\n", temp_buffer);
-    fflush(fptr);
-
     int current_depth = 1;
     clock_t start = clock();
     _timer timer = {start, time, current_depth, depth};
     _node_info info = {1, 1};
     while (current_depth <= depth || time_elapsed(timer) < time){
         search(board, current_depth, DEFAULT_ALPHA, DEFAULT_BETA, info, context, stats, timer);
-        _tt_search_entry *entry = (_tt_search_entry *)tt_get_item(context->table, board->zobrist_hash);
-        fprintf(fptr, "depth: %d, time: %f, game state: %d, min depth: %d, max time: %f, nodes visited: %d, entry depth: %d, entry eval: %d\n", current_depth, time_elapsed(timer), board->game_state, timer.min_depth, timer.max_time, stats->nodes_visited, entry->depth, entry->eval);
-        fflush(fptr);
-        stats->nodes_visited = 0;
         current_depth++;
         timer.current_depth = current_depth;
     }
-
-    fclose(fptr);
 
     for (int i = 0; i < 12; i++){
         for (int j = 0; j < 64; j++){
