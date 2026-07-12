@@ -38,7 +38,7 @@ def decline_takeback(id: str):
     headers = {"Authorization" : f"Bearer {api_token}"}
     requests.post(url=url, headers=headers).raise_for_status()
 
-def play_game(id: str, my_color: bool):
+def play_game(id: str, my_color: bool, event_queue: queue.Queue):
     bot_path = Path(__file__).resolve().parent.parent / "bin" / "bot"
     chess_game = subprocess.Popen(
         [bot_path, str(min_depth), str(max_seconds)], 
@@ -48,9 +48,8 @@ def play_game(id: str, my_color: bool):
     assert chess_game.stdin is not None
     assert chess_game.stdout is not None
 
-    event_queue = queue.Queue()
-    game_stop = threading.Event()
-    stream_started = threading.Event()
+    game_stop: threading.Event = threading.Event()
+    stream_started: threading.Event = threading.Event()
     def stream_reader():
         # white = True, black = False
         color: bool = True
@@ -101,16 +100,17 @@ def play_game(id: str, my_color: bool):
         except Exception as e:
             event_queue.put(("engine_error", e))
 
-    stream_thread = threading.Thread(target=stream_reader, daemon=True)
-    engine_thread = threading.Thread(target=engine, daemon=True)
-    stream_thread.start()
-    engine_thread.start()
+    threading.Thread(target=stream_reader, daemon=True).start()
+    threading.Thread(target=engine, daemon=True).start()
 
     can_abort: bool = True
     try:
         while True:
-            source, message = event_queue.get()
-
+            item = event_queue.get()
+            if item is None:
+                raise RuntimeError("Stop signal")
+            
+            source, message = item
             if source == "stream":
                 event: dict = message
                 if event["status"] != "started":
@@ -185,6 +185,8 @@ if __name__ == "__main__":
     playing_game: bool = False
     url: str = "https://lichess.org/api/stream/event"
     headers: dict = {"Authorization" : f"Bearer {api_token}"}
+    event_queue: queue.Queue = queue.Queue()
+    game: threading.Thread = None
     try:
         with requests.get(url=url, headers=headers, stream=True) as r:
             r.raise_for_status()
@@ -193,6 +195,7 @@ if __name__ == "__main__":
                 if not line:
                     if not playing_game:
                         with requests.get(url="https://lichess.org/api/challenge", headers=headers) as s:
+                            s.raise_for_status()
                             challenges = s.json()
                             if len(challenges["in"]) == 0 and len(challenges["out"]) == 0:
                                 # make challenge
@@ -205,10 +208,16 @@ if __name__ == "__main__":
                 event = json.loads(line)
                 event_type: str = event["type"]
                 if event_type == "gameStart":
+                    # reset the queue
+                    if game is not None:
+                        game.join()
+                    with event_queue.mutex:
+                        event_queue.queue.clear()
+
                     # start thread to handle game
-                    game_thread: threading.Thread = threading.Thread(target=play_game, args=(event["game"]["gameId"], 
-                                                event["game"]["color"] == "white"))
-                    game_thread.start()
+                    args: tuple[str, bool, queue.Queue] = (event["game"]["gameId"], event["game"]["color"] == "white", event_queue)
+                    game = threading.Thread(target=play_game, args=args)
+                    game.start()
                     playing_game = True
                 elif event_type == "challenge" and event["challenge"]["challenger"]["name"] != my_name:
                     challenge_id: str = event["challenge"]["id"]
@@ -230,6 +239,9 @@ if __name__ == "__main__":
                 if num_games >= max_games:
                     break
     except Exception as e:
+        if playing_game:
+            event_queue.put(None)
         print(e)
-            
-print("exiting program")
+
+    game.join()
+    print("exiting program")
