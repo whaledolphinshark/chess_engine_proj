@@ -65,11 +65,14 @@ def play_game(id: str, my_color: bool):
                         continue
 
                     event = json.loads(line)
-                    if event["type"] == "gameFull":
+                    event_type: str = event["type"]
+                    if event_type == "gameFull":
                         # see which color i am
                         if event["black"]["name"] == my_name:
                             color = False
                         event = event["state"]
+                    elif event_type != "gameState":
+                        continue
 
                     # check if takeback or draw offer
                     draw_offer: str = "bdraw" if color else "wdraw"
@@ -182,42 +185,51 @@ if __name__ == "__main__":
     playing_game: bool = False
     url: str = "https://lichess.org/api/stream/event"
     headers: dict = {"Authorization" : f"Bearer {api_token}"}
-    with requests.get(url=url, headers=headers, stream=True) as r:
-        r.raise_for_status()
+    try:
+        with requests.get(url=url, headers=headers, stream=True) as r:
+            r.raise_for_status()
 
-        for line in r.iter_lines():
-            if not line:
-                # challenge ai to test
-                if not playing_game:
-                    with requests.get(url="https://lichess.org/api/challenge", headers=headers) as s:
-                        challenges = s.json()
-                        if len(challenges["in"]) == 0 and len(challenges["out"]) == 0:
-                            # make challenge
-                            data = {"clock.limit": 300, "clock.increment": 3, "color": "random", "variant": "standard"}
-                            requests.post(url=f"https://lichess.org/api/challenge/{random.choice(bots)}", headers=headers, data=data).raise_for_status()
-                continue
+            for line in r.iter_lines():
+                if not line:
+                    if not playing_game:
+                        with requests.get(url="https://lichess.org/api/challenge", headers=headers) as s:
+                            challenges = s.json()
+                            if len(challenges["in"]) == 0 and len(challenges["out"]) == 0:
+                                # make challenge
+                                data = {"clock.limit": 300, "clock.increment": 3, "color": "random", "variant": "standard", "rated": "true"}
+                                requests.post(url=f"https://lichess.org/api/challenge/{random.choice(bots)}", headers=headers, data=data).raise_for_status()
+                    continue
 
-            event = json.loads(line)
-            event_type: str = event["type"]
-            if event_type == "gameStart":
-                # start thread to handle game
-                game_thread: threading.Thread = threading.Thread(target=play_game, args=(event["game"]["gameId"], 
-                                            event["game"]["color"] == "white"))
-                game_thread.start()
-                playing_game = True
-            elif (event_type == "challenge" and 
-                  not playing_game and
-                  event["challenge"]["status"] == "created" and
-                  event["challenge"]["destUser"]["name"] == my_name and
-                  event["challenge"]["variant"]["key"] == "standard" and
-                  event["challenge"]["speed"] == "blitz"):
-                # accept challenge
-                requests.post(url=f"https://lichess.org/api/challenge/{event["challenge"]["id"]}/accept", headers=headers).raise_for_status()
-            elif event_type == "gameFinish":
-                playing_game = False
-                num_games += 1
+                print(line)
 
-            if num_games >= max_games:
-                break
+                event = json.loads(line)
+                event_type: str = event["type"]
+                if event_type == "gameStart":
+                    # start thread to handle game
+                    game_thread: threading.Thread = threading.Thread(target=play_game, args=(event["game"]["gameId"], 
+                                                event["game"]["color"] == "white"))
+                    game_thread.start()
+                    playing_game = True
+                elif event_type == "challenge" and event["challenge"]["challenger"]["name"] != my_name:
+                    challenge_id: str = event["challenge"]["id"]
+                    if (not playing_game and
+                        event["challenge"]["status"] == "created" and
+                        event["challenge"]["destUser"]["name"] == my_name and
+                        event["challenge"]["variant"]["key"] == "standard" and
+                        event["challenge"]["speed"] == "blitz"):
+                        # accept challenge
+                        requests.post(url=f"https://lichess.org/api/challenge/{challenge_id}/accept", headers=headers).raise_for_status()
+                    else:
+                        # decline challenge
+                        data: dict = {"reason": "generic"}
+                        requests.post(url=f"https://lichess.org/api/challenge/{challenge_id}/decline", headers=headers, data=data).raise_for_status()
+                elif event_type == "gameFinish":
+                    playing_game = False
+                    num_games += 1
+
+                if num_games >= max_games:
+                    break
+    except Exception as e:
+        print(e)
             
 print("exiting program")
