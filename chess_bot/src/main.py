@@ -243,5 +243,6 @@ if __name__ == "__main__":
             event_queue.put(None)
         print(e)
 
-    game.join()
+    if game is not None:
+        game.join()
     print("exiting program")
