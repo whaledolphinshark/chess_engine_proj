@@ -49,7 +49,8 @@ def play_game(id: str, my_color: bool):
     assert chess_game.stdout is not None
 
     event_queue = queue.Queue()
-    stream_stop = threading.Event()
+    game_stop = threading.Event()
+    stream_started = threading.Event()
     def stream_reader():
         # white = True, black = False
         color: bool = True
@@ -58,6 +59,7 @@ def play_game(id: str, my_color: bool):
             headers: dict = {"Authorization" : f"Bearer {api_token}"}
             with requests.get(url=url, headers=headers, stream=True) as r:
                 r.raise_for_status()
+                stream_started.set()
                 for line in r.iter_lines():
                     if not line:
                         continue
@@ -82,12 +84,12 @@ def play_game(id: str, my_color: bool):
                     event_queue.put(("stream", event))
         except Exception as e:
             event_queue.put(("stream error", e))
-            stream_stop.set()
+            game_stop.set()
 
     def engine():
         assert chess_game.stdout is not None
         try:
-            while not stream_stop.is_set():
+            while not game_stop.is_set():
                 line = chess_game.stdout.readline()
                 if not line:  # engine crashed
                     event_queue.put(("engine_error", RuntimeError("engine crashed")))
@@ -102,7 +104,6 @@ def play_game(id: str, my_color: bool):
     engine_thread.start()
 
     can_abort: bool = True
-    exit_stream: bool = True
     try:
         while True:
             source, message = event_queue.get()
@@ -110,7 +111,7 @@ def play_game(id: str, my_color: bool):
             if source == "stream":
                 event: dict = message
                 if event["status"] != "started":
-                    stream_stop.set()
+                    game_stop.set()
                     break
                 
                 moves_str: str = event["moves"]
@@ -130,11 +131,9 @@ def play_game(id: str, my_color: bool):
                 post_move(id, response)
             else:
                 error: Exception = message
-                if source == "stream error":
-                    exit_stream = False
                 raise error
     except Exception as e:
-        if exit_stream:
+        if stream_started:
             if can_abort:
                 abort_game(id)
             else:
