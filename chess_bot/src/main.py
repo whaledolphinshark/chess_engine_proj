@@ -54,7 +54,7 @@ def play_game(id: str, my_color: bool, event_queue: queue.Queue):
         # white = True, black = False
         color: bool = True
         try:
-            url: str = f"https://lichess.org/api/board/game/stream/{id}"
+            url: str = f"https://lichess.org/api/bot/game/stream/{id}"
             headers: dict = {"Authorization" : f"Bearer {api_token}"}
             with requests.get(url=url, headers=headers, stream=True) as r:
                 r.raise_for_status()
@@ -199,7 +199,7 @@ if __name__ == "__main__":
                             challenges = s.json()
                             if len(challenges["in"]) == 0 and len(challenges["out"]) == 0:
                                 # make challenge
-                                data = {"clock.limit": 300, "clock.increment": 3, "color": "random", "variant": "standard", "rated": "true"}
+                                data = {"clock.limit": 300, "clock.increment": 3, "color": "random", "variant": "standard", "rated": "false"}
                                 requests.post(url=f"https://lichess.org/api/challenge/{random.choice(bots)}", headers=headers, data=data).raise_for_status()
                     continue
 
