@@ -174,12 +174,12 @@ if __name__ == "__main__":
     assert max_games
 
     # get bots
-    bots: list[str] = []
+    bots: set[str] = set()
     with requests.get(url="https://lichess.org/api/bot/online") as r:
         r.raise_for_status()
 
         for line in r.iter_lines():
-            bots.append(json.loads(line)["username"])
+            bots.add(json.loads(line)["username"])
 
     num_games: int = 0
     playing_game: bool = False
@@ -194,18 +194,22 @@ if __name__ == "__main__":
             for line in r.iter_lines():
                 if not line:
                     if not playing_game:
+                        if len(bots) == 0:
+                            raise RuntimeError("No more bots to play")
+                        
                         with requests.get(url="https://lichess.org/api/challenge", headers=headers) as s:
                             s.raise_for_status()
-                            challenges = s.json()
+                            challenges: dict = s.json()
                             if len(challenges["in"]) == 0 and len(challenges["out"]) == 0:
-                                # make challenge
-                                data = {"clock.limit": 300, "clock.increment": 3, "color": "random", "variant": "standard", "rated": "false"}
-                                requests.post(url=f"https://lichess.org/api/challenge/{random.choice(bots)}", headers=headers, data=data).raise_for_status()
+                                data: dict = {"clock.limit": 300, "clock.increment": 3, "color": "random", "variant": "standard", "rated": "true"}
+                                opponent: str = random.choice(tuple(bots))
+                                requests.post(url=f"https://lichess.org/api/challenge/{opponent}", headers=headers, data=data)
+                                bots.remove(opponent)
                     continue
 
                 print(line)
 
-                event = json.loads(line)
+                event: dict = json.loads(line)
                 event_type: str = event["type"]
                 if event_type == "gameStart":
                     # reset the queue
