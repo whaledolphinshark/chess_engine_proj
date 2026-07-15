@@ -12,6 +12,7 @@ my_name: str | None = None
 min_depth: int | None = None
 max_seconds: int | None = None
 max_games: int | None = None
+min_elo: int | None = None
 
 def resign_game(id: str):
     url = f"https://lichess.org/api/bot/game/{id}/resign"
@@ -149,7 +150,7 @@ def play_game(id: str, my_color: bool, event_queue: queue.Queue):
     print(f"finished game: {id}")
 
 def read_env():
-    global api_token, my_name, min_depth, max_seconds, max_games
+    global api_token, my_name, min_depth, max_seconds, max_games, min_elo
     env_path = Path(__file__).resolve().parent.parent / ".env"
     with open(env_path, 'r') as file:
         lines = file.read().splitlines()
@@ -165,8 +166,10 @@ def read_env():
                 max_seconds = int(key_value[1])
             elif key_value[0] == "max_games":
                 max_games = int(key_value[1])
+            elif key_value[0] == "min_elo":
+                min_elo = int(key_value[1])
 
-    if not api_token or not my_name or not min_depth or not max_seconds or not max_games:
+    if not api_token or not my_name or not min_depth or not max_seconds or not max_games or not min_elo:
         sys.exit("some environment variables were not found")
 
 if __name__ == "__main__":
@@ -179,7 +182,10 @@ if __name__ == "__main__":
         r.raise_for_status()
 
         for line in r.iter_lines():
-            bots.add(json.loads(line)["username"])
+            bot: dict = json.loads(line)
+            if bot["perfs"]["blitz"]["rating"] >= min_elo:
+                print(bot["username"] + " " + str(bot["perfs"]["blitz"]["rating"]))
+                bots.add(bot["username"])
 
     num_games: int = 0
     playing_game: bool = False
