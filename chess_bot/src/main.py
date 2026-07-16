@@ -101,8 +101,8 @@ def play_game(id: str, my_color: bool, event_queue: queue.Queue):
         except Exception as e:
             event_queue.put(("engine_error", e))
 
-    threading.Thread(target=stream_reader, daemon=True).start()
-    threading.Thread(target=engine, daemon=True).start()
+    threading.Thread(target=stream_reader).start()
+    threading.Thread(target=engine).start()
 
     can_abort: bool = True
     try:
@@ -137,7 +137,7 @@ def play_game(id: str, my_color: bool, event_queue: queue.Queue):
                 error: Exception = message
                 raise error
     except Exception as e:
-        if stream_started:
+        if stream_started.is_set():
             if can_abort:
                 abort_game(id)
             else:
@@ -184,14 +184,13 @@ if __name__ == "__main__":
         for line in r.iter_lines():
             bot: dict = json.loads(line)
             if bot["perfs"]["blitz"]["rating"] >= min_elo:
-                print(bot["username"] + " " + str(bot["perfs"]["blitz"]["rating"]))
                 bots.add(bot["username"])
 
     num_games: int = 0
     playing_game: bool = False
     url: str = "https://lichess.org/api/stream/event"
     headers: dict = {"Authorization" : f"Bearer {api_token}"}
-    event_queue: queue.Queue = queue.Queue()
+    event_queue: queue.Queue = None
     game: threading.Thread = None
     try:
         with requests.get(url=url, headers=headers, stream=True) as r:
@@ -219,10 +218,7 @@ if __name__ == "__main__":
                 event_type: str = event["type"]
                 if event_type == "gameStart":
                     # reset the queue
-                    if game is not None:
-                        game.join()
-                    with event_queue.mutex:
-                        event_queue.queue.clear()
+                    event_queue = queue.Queue()
 
                     # start thread to handle game
                     args: tuple[str, bool, queue.Queue] = (event["game"]["gameId"], event["game"]["color"] == "white", event_queue)
@@ -240,9 +236,12 @@ if __name__ == "__main__":
                         requests.post(url=f"https://lichess.org/api/challenge/{challenge_id}/accept", headers=headers).raise_for_status()
                     else:
                         # decline challenge
+                        print("decling challenge")
+                        print(playing_game, event["challenge"]["status"], event["challenge"]["destUser"]["name"], event["challenge"]["variant"]["key"], event["challenge"]["speed"])
                         data: dict = {"reason": "generic"}
                         requests.post(url=f"https://lichess.org/api/challenge/{challenge_id}/decline", headers=headers, data=data).raise_for_status()
                 elif event_type == "gameFinish":
+                    game.join()
                     playing_game = False
                     num_games += 1
 
