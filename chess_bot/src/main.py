@@ -105,6 +105,8 @@ def play_game(id: str, my_color: bool, event_queue: queue.Queue):
     threading.Thread(target=engine).start()
 
     can_abort: bool = True
+    source: str = ""
+    message = None
     try:
         while True:
             item = event_queue.get()
@@ -142,7 +144,7 @@ def play_game(id: str, my_color: bool, event_queue: queue.Queue):
                 abort_game(id)
             else:
                 resign_game(id)
-        print(e)
+        print(f"{source}: {e}")
 
     chess_game.stdin.close()
     chess_game.wait()
@@ -192,6 +194,7 @@ if __name__ == "__main__":
     headers: dict = {"Authorization" : f"Bearer {api_token}"}
     event_queue: queue.Queue = None
     game: threading.Thread = None
+    challenge_id: str = ""
     try:
         with requests.get(url=url, headers=headers, stream=True) as r:
             r.raise_for_status()
@@ -202,14 +205,27 @@ if __name__ == "__main__":
                         if len(bots) == 0:
                             raise RuntimeError("No more bots to play")
                         
-                        with requests.get(url="https://lichess.org/api/challenge", headers=headers) as s:
-                            s.raise_for_status()
-                            challenges: dict = s.json()
-                            if len(challenges["in"]) == 0 and len(challenges["out"]) == 0:
-                                data: dict = {"clock.limit": 300, "clock.increment": 3, "color": "random", "variant": "standard", "rated": "true"}
-                                opponent: str = random.choice(tuple(bots))
-                                requests.post(url=f"https://lichess.org/api/challenge/{opponent}", headers=headers, data=data)
-                                bots.remove(opponent)
+                        if not challenge_id:
+                            # make challenge
+                            data: dict = {"clock.limit": 300, "clock.increment": 3, "color": "random", "variant": "standard", "rated": "true"}
+                            opponent: str = random.choice(tuple(bots))
+                            with requests.post(url=f"https://lichess.org/api/challenge/{opponent}", headers=headers, data=data) as s:
+                                response: dict = s.json()
+                                challenge_id = response["id"] if "error" not in response else ""
+                            bots.remove(opponent)
+                        else:
+                            with requests.get(url=f"https://lichess.org/api/challenge/{challenge_id}/show", headers=headers) as s:
+                                s.raise_for_status()
+                                challenge_status: dict = s.json()
+                                # check if previous challenge is still up
+                                if challenge_status["status"] != "created" and not playing_game:
+                                    # if not up make new one and not playing game make new challenge
+                                    data: dict = {"clock.limit": 300, "clock.increment": 3, "color": "random", "variant": "standard", "rated": "true"}
+                                    opponent: str = random.choice(tuple(bots))
+                                    with requests.post(url=f"https://lichess.org/api/challenge/{opponent}", headers=headers, data=data) as t:
+                                        response: dict = t.json()
+                                        challenge_id = response["id"] if "error" not in response else ""
+                                    bots.remove(opponent)
                     continue
 
                 print(line)
@@ -236,12 +252,13 @@ if __name__ == "__main__":
                         requests.post(url=f"https://lichess.org/api/challenge/{challenge_id}/accept", headers=headers).raise_for_status()
                     else:
                         # decline challenge
-                        print("decling challenge")
+                        print("declining challenge")
                         print(playing_game, event["challenge"]["status"], event["challenge"]["destUser"]["name"], event["challenge"]["variant"]["key"], event["challenge"]["speed"])
                         data: dict = {"reason": "generic"}
                         requests.post(url=f"https://lichess.org/api/challenge/{challenge_id}/decline", headers=headers, data=data).raise_for_status()
                 elif event_type == "gameFinish":
                     game.join()
+                    print("thread finished")
                     playing_game = False
                     num_games += 1
 
