@@ -248,8 +248,14 @@ if __name__ == "__main__":
                         event["challenge"]["destUser"]["name"] == my_name and
                         event["challenge"]["variant"]["key"] == "standard" and
                         event["challenge"]["speed"] == "blitz"):
-                        # accept challenge
-                        requests.post(url=f"https://lichess.org/api/challenge/{challenge_id}/accept", headers=headers).raise_for_status()
+
+                        # see if any recently issued challenges are still up
+                        with requests.get(url=f"https://lichess.org/api/challenge/{challenge_id}/show", headers=headers) as s:
+                            s.raise_for_status()
+                            challenge_status: dict = s.json()
+                            if challenge_status["status"] != "created":
+                                # accept challenge
+                                requests.post(url=f"https://lichess.org/api/challenge/{challenge_id}/accept", headers=headers).raise_for_status()
                     else:
                         # decline challenge
                         print("declining challenge")
