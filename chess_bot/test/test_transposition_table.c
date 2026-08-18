@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <bits/getopt_core.h>
+#include <getopt.h>
 #include <time.h>
 
 #include "chess_engine/chess_types.h"
@@ -165,7 +165,7 @@ int main(int argc, char *argv[]){
     // validate checks
     for (int i = 0; i < num_items; i++){
         if (checks[i] != 1){
-            printf("key not found in table: %lu\n", keys[i]);
+            printf("key not found in table: %llu\n", keys[i]);
         }
     }
 
@@ -189,7 +189,7 @@ int main(int argc, char *argv[]){
     // validate deletes
     for (int i = 0; i < num_items; i++){
         if (deletes[i] != 1){
-            printf("entry not deleted: %lu\n", keys[i]);
+            printf("entry not deleted: %llu\n", keys[i]);
         }
     }
 

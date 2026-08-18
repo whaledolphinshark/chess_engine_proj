@@ -22,7 +22,9 @@ TARGET_3 = bin/tt_test
 TARGET_4 = bin/test_match
 TARGET_5 = bin/test_bots
 
-all: $(TARGET_1) $(TARGET_2) $(TARGET_3) $(TARGET_4) $(TARGET_5)
+all: $(TARGET_1) $(TARGET_2) $(TARGET_3)
+
+bots: all $(TARGET_4) $(TARGET_5)
 
 $(TARGET_1): $(PROG_1)
 	$(CC) $(CFLAGS) -o $(TARGET_1) $(PROG_1)
@@ -35,7 +37,11 @@ $(TARGET_3): $(PROG_3)
 
 $(TARGET_4): $(PROG_4)
 	$(CC) $(CFLAGS) -o $(TARGET_4) $(PROG_4)
-	
+    
 $(TARGET_5): $(PROG_5)
 	$(CC) $(CFLAGS) -o $(TARGET_5) $(PROG_5)
+
+.PHONY: all bots clean
+clean:
+	rm -f $(TARGET_1) $(TARGET_2) $(TARGET_3) $(TARGET_4) $(TARGET_5)
 
