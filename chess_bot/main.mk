@@ -1,5 +1,6 @@
 CC = gcc
 CFLAGS = -Wall -g -O2 -I./src -I./include
+BIN_DIR = bin
 
 INIT = src/init_chess_engine/init_chess_engine.c
 BOARD = src/board/init_board.c src/board/board.c  src/board/fen.c
@@ -11,7 +12,15 @@ UTILS = src/utils/list/list.c src/utils/bitboard_util.c src/utils/error_handling
 
 OBJS = src/bot.c $(BOARD) $(MOVES) $(TRANSPOSITION_TABLE) $(SEARCH) $(EVALUATE) $(UTILS) $(INIT)
 
-TARGET = bin/bot
+TARGET = $(BIN_DIR)/bot
 
-$(TARGET): $(OBJS)
+all: $(TARGET)
+
+$(BIN_DIR):
+	mkdir -p $(BIN_DIR)
+
+$(TARGET): $(OBJS) | $(BIN_DIR)
 	$(CC) $(CFLAGS) -o $(TARGET) $(OBJS)
+
+clean:
+	rm -f $(TARGET)
