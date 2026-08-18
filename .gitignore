@@ -1,5 +1,4 @@
 bin/
-*.mk
 *.txt
 **/alt_bot/*
 .vscode
