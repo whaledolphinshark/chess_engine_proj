@@ -172,7 +172,7 @@ def read_env():
                 min_elo = int(key_value[1])
 
     if not api_token or not my_name or not min_depth or not max_seconds or not max_games or not min_elo:
-        sys.exit("some environment variables were not found")
+        sys.exit("some environment variables were not found\nrequired: api_token, my_name, min_depth, max_seconds, max_games, min_elo")
 
 if __name__ == "__main__":
     read_env()

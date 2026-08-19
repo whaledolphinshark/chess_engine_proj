@@ -30,7 +30,7 @@ void print_game_state(_board *board){
     cb_board_to_fen(board, fen);
     printf("fen: %s\n", fen);
     cb_display_fen(fen);
-    printf("zobrist hash: %lu\n", board->zobrist_hash);
+    printf("zobrist hash: %llu\n", board->zobrist_hash);
     printf("plies: %d\n", board->plies);
 
     switch (board->game_state){

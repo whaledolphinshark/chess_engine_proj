@@ -1,5 +1,7 @@
 bin/
 *.txt
+!requirements.txt
 **/alt_bot/*
 .vscode
 *.env
+.venv/
