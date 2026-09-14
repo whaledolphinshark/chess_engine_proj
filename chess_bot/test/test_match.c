@@ -200,7 +200,7 @@ int main(int argc, char *argv[]){
                 printf("cannot undo move\n");
                 continue;
             }
-            num_moves--;
+            num_moves -= 2;
         }
         else{
             int success = player_move(board, input);
@@ -209,15 +209,16 @@ int main(int argc, char *argv[]){
                 continue;
             }
             num_moves++;
-        }
-
-        if (board->game_state == ONGOING){
-            int success = bot_move(board, context, depth);
-            if (success == 0){
-                fprintf(stderr, "error: invalid move played\n");
-                cb_destroy_board(board);
-                return 1;
+            
+            if (board->game_state == ONGOING){
+                int success = bot_move(board, context, depth);
+                if (success == 0){
+                    fprintf(stderr, "error: invalid move played\n");
+                    cb_destroy_board(board);
+                    return 1;
+                }
             }
+            num_moves++;
         }
     }
 
