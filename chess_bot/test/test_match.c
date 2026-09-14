@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include <bits/getopt_core.h>
+#include <getopt.h>
 #include <time.h>
 
 #include "chess_engine/chess_types.h"

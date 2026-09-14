@@ -14,7 +14,7 @@ ALL = $(BOARD) $(MOVES) $(TRANSPOSITION_TABLE) $(SEARCH) $(EVALUATE) $(UTILS) $(
 PROG_1 = test/perft.c $(BOARD) $(MOVES) $(TRANSPOSITION_TABLE) $(UTILS) $(INIT)
 PROG_2 = test/manual_test.c $(BOARD) $(MOVES) $(TRANSPOSITION_TABLE) $(UTILS) $(INIT)
 PROG_3 = test/test_transposition_table.c $(TRANSPOSITION_TABLE) $(UTILS)
-PROG_4 = test/test_match.c $(ALL) test/alt_bot/alt_search.c
+PROG_4 = test/test_match.c $(ALL)
 PROG_5 = test/test_bots.c $(ALL) test/alt_bot/alt_search.c
 
 TARGET_1 = $(BIN_DIR)/perft
@@ -23,9 +23,9 @@ TARGET_3 = $(BIN_DIR)/tt_test
 TARGET_4 = $(BIN_DIR)/test_match
 TARGET_5 = $(BIN_DIR)/test_bots
 
-all: $(TARGET_1) $(TARGET_2) $(TARGET_3)
+all: $(TARGET_1) $(TARGET_2) $(TARGET_3) $(TARGET_4)
 
-bots: all $(TARGET_4) $(TARGET_5)
+bots: all $(TARGET_5)
 
 $(BIN_DIR):
 	 mkdir -p $(BIN_DIR)
