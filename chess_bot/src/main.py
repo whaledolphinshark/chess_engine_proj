@@ -201,38 +201,40 @@ if __name__ == "__main__":
 
             for line in r.iter_lines():    
                 if not line:
-                    if not playing_game:    
-                        if len(bots) == 0:
-                            raise RuntimeError("No more bots to play")
-                        
-                        if not challenge_id:
-                            # make challenge
-                            data: dict = {"clock.limit": 300, "clock.increment": 3, "color": "random", "variant": "standard", "rated": "true"}
-                            opponent: str = random.choice(tuple(bots))
-                            with requests.post(url=f"https://lichess.org/api/challenge/{opponent}", headers=headers, data=data) as s:
-                                response: dict = s.json()
-                                challenge_id = response["id"] if "error" not in response else ""
-                            bots.remove(opponent)
-                        else:
-                            with requests.get(url=f"https://lichess.org/api/challenge/{challenge_id}/show", headers=headers) as s:
-                                s.raise_for_status()
-                                challenge_status: dict = s.json()
-                                status: str = challenge_status["status"]
-                                if status == "offline":
-                                    # cancel challenge
-                                    requests.post(url=f"https://lichess.org/api/challenge/{challenge_id}/cancel", headers=headers).raise_for_status()
-                                    print("canceling challenge") 
-                                # check if previous challenge is still up
-                                if (status == "declined" or status == "canceled" or status == "accepted") and not playing_game:
-                                    # if not up and not playing game make new challenge
-                                    print(f"previous challenge: {status}") 
-                                    data: dict = {"clock.limit": 300, "clock.increment": 3, "color": "random", "variant": "standard", "rated": "true"}
-                                    opponent: str = random.choice(tuple(bots))
-                                    print("sending challenge")
-                                    with requests.post(url=f"https://lichess.org/api/challenge/{opponent}", headers=headers, data=data) as t:
-                                        response: dict = t.json()
-                                        challenge_id = response["id"] if "error" not in response else ""
-                                    bots.remove(opponent)
+                    if playing_game:
+                        continue
+                    
+                    if len(bots) == 0:
+                        raise RuntimeError("No more bots to play")
+                    
+                    if not challenge_id:
+                        # make challenge
+                        data: dict = {"clock.limit": 300, "clock.increment": 3, "color": "random", "variant": "standard", "rated": "true"}
+                        opponent: str = random.choice(tuple(bots))
+                        with requests.post(url=f"https://lichess.org/api/challenge/{opponent}", headers=headers, data=data) as s:
+                            response: dict = s.json()
+                            challenge_id = response["id"] if "error" not in response else ""
+                        bots.remove(opponent)
+                    else:
+                        with requests.get(url=f"https://lichess.org/api/challenge/{challenge_id}/show", headers=headers) as s:
+                            s.raise_for_status()
+                            challenge_status: dict = s.json()
+                            status: str = challenge_status["status"]
+                            if status == "offline":
+                                # cancel challenge
+                                requests.post(url=f"https://lichess.org/api/challenge/{challenge_id}/cancel", headers=headers).raise_for_status()
+                                print("canceling challenge") 
+                            # check if previous challenge is still up
+                            if (status == "declined" or status == "canceled" or status == "accepted") and not playing_game:
+                                # if not up and not playing game make new challenge
+                                print(f"previous challenge: {status}") 
+                                data: dict = {"clock.limit": 300, "clock.increment": 3, "color": "random", "variant": "standard", "rated": "true"}
+                                opponent: str = random.choice(tuple(bots))
+                                print("sending challenge")
+                                with requests.post(url=f"https://lichess.org/api/challenge/{opponent}", headers=headers, data=data) as t:
+                                    response: dict = t.json()
+                                    challenge_id = response["id"] if "error" not in response else ""
+                                bots.remove(opponent)
                     continue
 
                 event: dict = json.loads(line)
