@@ -107,7 +107,7 @@ def play_game(id: str, my_color: bool, event_queue: queue.Queue):
     # we do not abort if first 2 moves have been made even if game is dead
     # since the timer should end the game eventually
     def check_dead_game():
-        time.sleep(30)
+        time.sleep(180)
         event_queue.put(("check_dead_game", RuntimeError("aborting dead game")))
 
     threading.Thread(target=stream_reader).start()
