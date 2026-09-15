@@ -6,6 +6,7 @@ import sys
 import random
 import subprocess
 import queue
+import time
 
 api_token: str | None = None
 my_name: str | None = None
@@ -85,7 +86,7 @@ def play_game(id: str, my_color: bool, event_queue: queue.Queue):
                         decline_takeback(id)
 
                     event_queue.put(("stream", event))
-        except Exception as e:
+        except Exception as e: 
             event_queue.put(("stream error", e))
             game_stop.set()
 
@@ -100,10 +101,19 @@ def play_game(id: str, my_color: bool, event_queue: queue.Queue):
                 event_queue.put(("engine", line))
         except Exception as e:
             event_queue.put(("engine_error", e))
+    
+    # check after 3 minutes if the first 2 moves have been played
+    # if not then potentially me or opponent is not playing game
+    # we do not abort if first 2 moves have been made even if game is dead
+    # since the timer should end the game eventually
+    def check_dead_game():
+        time.sleep(30)
+        event_queue.put(("check_dead_game", RuntimeError("aborting dead game")))
 
     threading.Thread(target=stream_reader).start()
     threading.Thread(target=engine).start()
-
+    threading.Thread(target=check_dead_game).start() 
+    
     can_abort: bool = True
     source: str = ""
     message = None
@@ -135,6 +145,11 @@ def play_game(id: str, my_color: bool, event_queue: queue.Queue):
             elif source == "engine":
                 response: str = message
                 post_move(id, response)
+            elif source == "check_dead_game" and can_abort:
+                # 3 minutes have passed and the first 2 moves have not been played
+                # abort game
+                error: Exception = message
+                raise error
             else:
                 error: Exception = message
                 raise error
