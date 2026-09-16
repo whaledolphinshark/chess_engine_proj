@@ -17,20 +17,16 @@ PROG_2 = test/perft.c $(BOARD) $(MOVES) $(TRANSPOSITION_TABLE) $(UTILS) $(INIT)
 PROG_3 = test/manual_test.c $(BOARD) $(MOVES) $(TRANSPOSITION_TABLE) $(UTILS) $(INIT)
 PROG_4 = test/test_transposition_table.c $(TRANSPOSITION_TABLE) $(UTILS)
 PROG_5 = test/test_match.c $(ALL)
-PROG_6 = test/test_bots.c $(ALL) test/alt_bot/alt_search.c
 
 TARGET_1 = $(BIN_DIR)/bot
 TARGET_2 = $(BIN_DIR)/perft
 TARGET_3 = $(BIN_DIR)/manual_test
 TARGET_4 = $(BIN_DIR)/tt_test
 TARGET_5 = $(BIN_DIR)/test_match
-TARGET_6 = $(BIN_DIR)/test_bots
 
 main: $(TARGET_1)
 
 tests: $(TARGET_2) $(TARGET_3) $(TARGET_4) $(TARGET_5)
-
-bot: $(TARGET_6)
 
 $(BIN_DIR):
 	mkdir -p $(BIN_DIR)
@@ -49,9 +45,6 @@ $(TARGET_4): $(PROG_3) | $(BIN_DIR)
 
 $(TARGET_5): $(PROG_4) | $(BIN_DIR)
 	$(CC) $(TEST_CFLAGS) -o $(TARGET_5) $(PROG_5)
-    
-$(TARGET_6): $(PROG_5) | $(BIN_DIR)
-	$(CC) $(TEST_CFLAGS) -o $(TARGET_6) $(PROG_6)
 
 clean:
-	rm -f $(TARGET_1) $(TARGET_2) $(TARGET_3) $(TARGET_4) $(TARGET_5) $(TARGET_6)
+	rm -f $(TARGET_1) $(TARGET_2) $(TARGET_3) $(TARGET_4) $(TARGET_5)
