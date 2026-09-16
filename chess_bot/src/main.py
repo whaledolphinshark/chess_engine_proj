@@ -271,7 +271,8 @@ if __name__ == "__main__":
                         event["challenge"]["status"] == "created" and
                         event["challenge"]["destUser"]["name"] == my_name and
                         event["challenge"]["variant"]["key"] == "standard" and
-                        event["challenge"]["speed"] == "blitz"):
+                        event["challenge"]["speed"] == "blitz" and
+                        event["challenge"]["challenger"]["rating"] >= min_elo):
                         
                         # see if any of my recently issued challenges are still up
                         with requests.get(url=f"https://lichess.org/api/challenge/{challenge_id}/show", headers=headers) as s:
