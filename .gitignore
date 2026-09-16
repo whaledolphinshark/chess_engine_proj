@@ -4,5 +4,6 @@ bin/
 **/alt_bot/*
 .vscode
 *.env
+!.env.example
 .venv/
 chess_bot/src/__pycache__/
