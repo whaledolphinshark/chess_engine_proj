@@ -24,7 +24,7 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-3. Set up the bot on lichess
+3. Set up the bot on lichess:
   The engine requires an api token and its name in order to play on lichess
    1. Sign up for free on lichess at [https://lichess.org/signup](https://lichess.org/signup)
    2. Generate an API access token with challenge:read, challenge:write, board:play and bot:play permissions
@@ -33,7 +33,7 @@ pip install -r requirements.txt
 curl -d '' https://lichess.org/api/bot/account/upgrade -H "Authorization: Bearer [yourTokenHere]"
 ```  
 
-4. Configure .env
+4. Configure .env:
 ```bash
 cp .env.example .env
 ```
@@ -48,6 +48,7 @@ Then edit .env with your own values
 | `min_elo` | The minimum elo of the opponent the bot is willing to play |
 
 5. Running the engine:
+
 Make sure you are in the virtual environment first (See step 2, use the 2nd command)
 ```
 python3 src/main.py
@@ -61,4 +62,4 @@ make tests
 The tests will be in the bin directory and can be run
 
 # Acknowledgements
-Thanks to Sebastian Lague's Chess-Coding-Adventure (https://github.com/SebLague/Chess-Coding-Adventure) for the magic bitboards and for inspiring this project in the first place
+Thanks to Sebastian Lague's Chess-Coding-Adventure (https://github.com/SebLague/Chess-Coding-Adventure) for the magic bitboard values and for inspiring this project in the first place
