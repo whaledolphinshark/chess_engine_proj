@@ -1,5 +1,5 @@
 # Overview
-A chess engine I made as a personal project. It plays online from time to time on lichess under the name somekindofbot. It was made with C and Python, and currently plays at around a 1750 elo on lichess. I don't expect anyone to use or care about this but here it is if you want it. It only runs on Mac/Linux. It is not guaranteed to run perfectly so please be mindful. I may update this repo from time to time.
+A chess engine I made as a personal project. It plays online from time to time on lichess under the name somekindofbot. It was made with C and Python, and currently plays at around a 1750 elo on lichess. I don't expect anyone to use or care about this but here it is if you want it. It only runs on Mac/Linux. I may update this repo from time to time.
 
 # Features
 A list of features the engine implements:
