@@ -13,7 +13,7 @@ How to install and run:
 1. Clone the repository and build the engine:
 ```bash
 git clone git@github.com:whaledolphinshark/proj.git
-cd proj/chess_bot
+cd chess_engine_proj/chess_bot
 make
 ```
 
