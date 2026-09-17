@@ -145,12 +145,13 @@ def play_game(id: str, my_color: bool, event_queue: queue.Queue):
             elif source == "engine":
                 response: str = message
                 post_move(id, response)
-            elif source == "check_dead_game" and can_abort:
-                # 3 minutes have passed and the first 2 moves have not been played
-                # abort game
-                error: Exception = message
-                raise error
-            else:
+            elif source == "check_dead_game":
+                if can_abort:
+                    # 3 minutes have passed and the first 2 moves have not been played
+                    # abort game
+                    error: Exception = message
+                    raise error
+            else:  
                 error: Exception = message
                 raise error
     except Exception as e:
