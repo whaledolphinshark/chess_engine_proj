@@ -3,7 +3,7 @@ A chess engine I made as a personal project. It plays online from time to time o
 
 # Features
 A list of features the engine implements:
-- Search: Principal variation search with iterative deepening, transposition table and quiescence search
+- Search: Principal variation search with iterative deepening, transposition table, quiescence search, null move pruning and late move reduction
 - Evaluation: Handcrafted, accounting for material and mobility, with piece square tables
 - Move ordering: MVV-LVA, history heuristic
 - Move generation: Bitboards with magic bitboards for move generation
