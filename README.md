@@ -27,7 +27,7 @@ pip install -r requirements.txt
 3. Set up the bot on lichess:
   The engine requires an api token and its name in order to play on lichess
    1. Sign up for free on lichess at [https://lichess.org/signup](https://lichess.org/signup)
-   2. Generate an API access token with challenge:read, challenge:write, board:play and bot:play permissions
+   2. Generate an API access token with challenge:read, challenge:write and bot:play permissions
    3. copy the api token and run the following command, replacing [yourTokenHere] with the api token:
 ```bash
 curl -d '' https://lichess.org/api/bot/account/upgrade -H "Authorization: Bearer [yourTokenHere]"
