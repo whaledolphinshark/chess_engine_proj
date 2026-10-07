@@ -12,7 +12,7 @@ A list of features the engine implements:
 How to install and run:
 1. Clone the repository and build the engine:
 ```bash
-git clone git@github.com:whaledolphinshark/proj.git
+git clone git@github.com:whaledolphinshark/chess_engine_proj.git
 cd chess_engine_proj/chess_bot
 make
 ```
