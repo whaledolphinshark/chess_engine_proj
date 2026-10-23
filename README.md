@@ -43,7 +43,6 @@ Then edit .env with your own values
 | `api_token` | API token from Lichess (see step 3) |
 | `name` | Username on Lichess |
 | `min_depth` | The minimum depth the engine will always search to |
-| `max_seconds` | Maximum amount of time the engine will search, min_depth overrides this, so it will always search to the minimum depth even if time is up |
 | `max_games` | How many games the engine will play before stopping |
 | `min_elo` | The minimum elo of the opponent the bot is willing to play |
 
