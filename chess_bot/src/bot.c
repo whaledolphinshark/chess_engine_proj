@@ -11,20 +11,15 @@
 #define BUFFER_SIZE 50
 
 int main(int argc, char *argv[]){
-    if (argc != 3){
-        fprintf(stderr, "Usage: %s <minimum depth> <maximum search time (seconds)>\n", argv[0]);
+    if (argc != 2){
+        fprintf(stderr, "Usage: %s <minimum depth>\n", argv[0]);
         return 1;
     }
     // get minimum depth and max search time
     char *end_ptr;
     const int min_depth = (int)strtol(argv[1], &end_ptr, 10);
     if (end_ptr == argv[1] || *end_ptr != '\0'){
-        fprintf(stderr, "Usage: %s <minimum depth> <maximum search time (seconds)>\n", argv[0]);
-        return 1;
-    }
-    const int max_seconds = (int)strtol(argv[2], &end_ptr, 10);
-    if (end_ptr == argv[1] || *end_ptr != '\0'){
-        fprintf(stderr, "Usage: %s <minimum depth> <maximum search time (seconds)>\n", argv[0]);
+        fprintf(stderr, "Usage: %s <minimum depth>\n", argv[0]);
         return 1;
     }
 
@@ -62,14 +57,12 @@ int main(int argc, char *argv[]){
 
         // get time
         char *end_ptr;
-        const int seconds = (int)strtol(buffer + comma_index + 1, &end_ptr, 10);
+        const int search_time = (int)strtol(buffer + comma_index + 1, &end_ptr, 10);
         if (end_ptr == (buffer + comma_index + 1) || *end_ptr != '\0'){
             printf("invalid input\n");
             fflush(stdout);
             continue;
         }
-        const int search_time = max_seconds < seconds ? max_seconds : seconds;
-
 
         if (strcmp(move_uci, "null") == 0){
             const _move move = se_search(board, min_depth, search_time, context, NULL);

@@ -12,7 +12,6 @@ from wakepy import keep
 api_token: str | None = None
 my_name: str | None = None
 min_depth: int | None = None
-max_seconds: int | None = None
 max_games: int | None = None
 min_elo: int | None = None
 
@@ -44,7 +43,7 @@ def decline_takeback(id: str):
 def play_game(id: str, my_color: bool, event_queue: queue.Queue):
     bot_path = Path(__file__).resolve().parent.parent / "bin" / "bot"
     chess_game = subprocess.Popen(
-        [bot_path, str(min_depth), str(max_seconds)], 
+        [bot_path, str(min_depth)], 
         stdin=subprocess.PIPE, 
         stdout=subprocess.PIPE, 
         text=True)
@@ -138,10 +137,13 @@ def play_game(id: str, my_color: bool, event_queue: queue.Queue):
                     can_abort = False
                 last_move_color: bool = num_moves % 2 == 1
                 if last_move_color != my_color:
-                    seconds: str = str(event["wtime" if my_color else "btime"] // 1000)
+                    seconds: int = event["wtime" if my_color else "btime"] // 1000
+                    increment: int = event["winc" if my_color else "btime"] // 1000
                     move: str = moves[-1] if num_moves > 0 else "null"
+                    # seconds/20 + inc/2
+                    think_time: str = str((seconds // 20) + (increment // 2))
 
-                    chess_game.stdin.write(f"{move},{seconds}\n")
+                    chess_game.stdin.write(f"{move},{think_time}\n")
                     chess_game.stdin.flush()
             elif source == "engine":
                 response: str = message
@@ -169,7 +171,7 @@ def play_game(id: str, my_color: bool, event_queue: queue.Queue):
     print(f"finished game: {id}")
 
 def read_env():
-    global api_token, my_name, min_depth, max_seconds, max_games, min_elo
+    global api_token, my_name, min_depth, max_games, min_elo
     env_path = Path(__file__).resolve().parent.parent / ".env"
     with open(env_path, 'r') as file:
         lines = file.read().splitlines()
@@ -181,15 +183,13 @@ def read_env():
                 my_name = key_value[1]
             elif key_value[0] == "min_depth":
                 min_depth = int(key_value[1])
-            elif key_value[0] == "max_seconds":
-                max_seconds = int(key_value[1])
             elif key_value[0] == "max_games":
                 max_games = int(key_value[1])
             elif key_value[0] == "min_elo":
                 min_elo = int(key_value[1])
 
-    if not api_token or not my_name or not min_depth or not max_seconds or not max_games or not min_elo:
-        sys.exit("some environment variables were not found\nrequired: api_token, my_name, min_depth, max_seconds, max_games, min_elo")
+    if not api_token or not my_name or not min_depth or not max_games or not min_elo:
+        sys.exit("some environment variables were not found\nrequired: api_token, my_name, min_depth, max_games, min_elo")
 
 if __name__ == "__main__":
     read_env()
